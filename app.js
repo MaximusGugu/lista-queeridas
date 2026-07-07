@@ -1,5 +1,6 @@
 let db = JSON.parse(localStorage.getItem("volei_todes_db")) || {
     config: {
+        nomeJogo: "Vôlei de quadra TODES 🏳️‍🌈",
         quadra: "DOM BOSCO - ITAJAÍ",
         data: "01/07",
         dia: "Quarta-Feira",
@@ -14,7 +15,6 @@ let db = JSON.parse(localStorage.getItem("volei_todes_db")) || {
 
 const listaDOM = document.getElementById("listaJogadores");
 
-// Inicializar Sortable para reordenar nomes
 if (listaDOM) {
     new Sortable(listaDOM, {
         animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost',
@@ -23,10 +23,11 @@ if (listaDOM) {
 }
 
 function render() {
-    const { quadra, data, dia, inicio, fim, valor, limite, pix } = db.config;
+    const { nomeJogo, quadra, data, dia, inicio, fim, valor, limite, pix } = db.config;
     
-    // Preview do Cabeçalho
+    // Preview do Cabeçalho no App
     document.getElementById("infoPreview").innerHTML = `
+        <div style="font-weight: bold; color: var(--secondary); margin-bottom: 5px; font-size: 16px;">${nomeJogo}</div>
         <small>📍 ${quadra} | ${data} (${dia}) | ${inicio} às ${fim}</small><br>
         <small>💰 R$ ${valor} (${limite} pessoas) | Pix: ${pix}</small>
     `;
@@ -36,7 +37,6 @@ function render() {
     db.jogadores.forEach((jog, index) => {
         const isEspera = index >= limite;
         
-        // Divisor de lista de espera
         if (index === limite) {
             const separator = document.createElement("div");
             separator.className = "espera-divider";
@@ -68,12 +68,11 @@ function render() {
     });
 }
 
-// --- MODAIS ---
 function abrirModal(id) { document.getElementById(id).style.display = "flex"; }
 function fecharModal(id) { document.getElementById(id).style.display = "none"; }
 
-// --- CONFIGURAÇÕES ---
 document.getElementById("btnConfig").onclick = () => {
+    document.getElementById("cfgNomeJogo").value = db.config.nomeJogo || "";
     document.getElementById("cfgQuadra").value = db.config.quadra;
     document.getElementById("cfgData").value = db.config.data;
     document.getElementById("cfgDia").value = db.config.dia;
@@ -87,6 +86,7 @@ document.getElementById("btnConfig").onclick = () => {
 
 document.getElementById("btnSalvarConfig").onclick = () => {
     db.config = {
+        nomeJogo: document.getElementById("cfgNomeJogo").value,
         quadra: document.getElementById("cfgQuadra").value,
         data: document.getElementById("cfgData").value,
         dia: document.getElementById("cfgDia").value,
@@ -99,7 +99,6 @@ document.getElementById("btnSalvarConfig").onclick = () => {
     salvar(); render(); fecharModal('modalConfig');
 };
 
-// --- IMPORTAÇÃO DE NOMES ---
 document.getElementById("btnOpenImport").onclick = () => abrirModal('modalImport');
 document.getElementById("btnConfirmarImport").onclick = () => {
     const texto = document.getElementById("textoNomesBulk").value.trim();
@@ -116,21 +115,21 @@ document.getElementById("btnConfirmarImport").onclick = () => {
     document.getElementById("textoNomesBulk").value = "";
 };
 
-// --- WHATSAPP CLIPBOARD ---
 document.getElementById("btnCopyWhatsapp").onclick = () => {
     const c = db.config;
-    let textoFinal = `Vôlei de quadra TODES 🏳️‍🌈\n`;
-    textoFinal += `📍${c.quadra.toUpperCase()} | ${c.data} (${c.dia}) - ${c.inicio} às ${c.fim} | Valor por pessoa: R$${c.valor} (${c.limite} pessoas) 💰 | Pix: ${c.pix}\n\n`;
+    // FORMATAÇÃO DO WHATSAPP AQUI
+    let textoFinal = `*${c.nomeJogo}*\n`;
+    textoFinal += `📍 ${c.quadra.toUpperCase()} | ${c.data} (${c.dia}) - ${c.inicio} às ${c.fim} | Valor por pessoa: R$${c.valor} (${c.limite} pessoas) 💰 | Pix: ${c.pix}\n\n`;
 
     db.jogadores.forEach((jog, index) => {
         if (index === c.limite) {
-            textoFinal += `\nLista de Espera\n`;
+            textoFinal += `\n*Lista de Espera*\n`;
         }
         textoFinal += `${index + 1} - ${jog.nome}\n`;
     });
 
     navigator.clipboard.writeText(textoFinal).then(() => {
-        alert("Lista formatada copiada para o WhatsApp!");
+        alert("Lista copiada com sucesso!");
     });
 };
 
@@ -150,7 +149,7 @@ function reordenarItens() {
     });
     db.jogadores = novosItens;
     salvar();
-    render(); // Re-renderiza para atualizar a numeração e a posição da linha de espera
+    render();
 }
 
 function salvar() { localStorage.setItem("volei_todes_db", JSON.stringify(db)); }

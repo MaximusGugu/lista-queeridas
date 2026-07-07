@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vôlei Todes - Lista</title>
+    <title>Queeridas Volleyball - Lista</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <link rel="stylesheet" href="style.css">
@@ -28,7 +28,7 @@
         <div class="bottom-actions">
             <button id="btnOpenImport" class="btn btn-main">COLAR LISTA DE NOMES</button>
             <button id="btnCopyWhatsapp" class="btn btn-sub" style="background: #25D366; color: white; border: none !important;">
-                COPIAR LISTA
+                COPIAR LISTA PARA WHATSAPP
             </button>
             <div class="row-gap">
                 <button id="btnClearAll" class="btn btn-sub danger">LIMPAR TUDO</button>
@@ -40,6 +40,12 @@
     <div id="modalConfig" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <h3>Configurar Evento</h3>
+            
+            <div class="campo-modal">
+                <label>🏐 Nome do Jogo / Categoria:</label>
+                <input type="text" id="cfgNomeJogo" class="input-modal" placeholder="Ex: Vôlei de quadra TODES 🏳️‍🌈">
+            </div>
+
             <div class="campo-modal">
                 <label>📍 Quadra:</label>
                 <input type="text" id="cfgQuadra" class="input-modal" placeholder="Ex: Dom Bosco">
@@ -80,7 +86,7 @@
             </div>
 
             <div class="modal-buttons" style="margin-top:20px;">
-                <button id="btnSalvarConfig" class="btn btn-main">SALVAR</button>
+                <button id="btnSalvarConfig" class="btn btn-main">SALVAR CONFIGURAÇÕES</button>
                 <button class="btn btn-sub" onclick="fecharModal('modalConfig')">CANCELAR</button>
             </div>
         </div>
@@ -90,7 +96,7 @@
     <div id="modalImport" class="modal-overlay" style="display:none;">
         <div class="modal-content">
             <h3>Colar Nomes</h3>
-            <p style="font-size: 12px; opacity: 0.7;">Cole um nome abaixo do outro (vindo do Forms ou WhatsApp)</p>
+            <p style="font-size: 12px; opacity: 0.7;">Cole um nome abaixo do outro</p>
             <textarea id="textoNomesBulk" placeholder="João Silva&#10;Maria Souza..."></textarea>
             <div class="modal-buttons">
                 <button id="btnConfirmarImport" class="btn btn-main">GERAR LISTA</button>
