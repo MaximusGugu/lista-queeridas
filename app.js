@@ -28,6 +28,12 @@ function inicializarMenu() {
             const sel = presets[id];
             if(sel) {
                 db.config = { ...db.config, ...sel, modalidade: id };
+                
+                // Lógica especial ELAX: Preenche 17 espaços vazios
+                if (id === "ELAX_QUINTA") {
+                    db.jogadores = Array.from({ length: 17 }, (_, i) => ({ id: Date.now() + i, nome: "" }));
+                }
+
                 salvar();
                 render();
             }
@@ -45,23 +51,19 @@ function render() {
         btn.classList.toggle('active', btn.getAttribute('data-id') === modalidade);
     });
 
-    // --- RENDERIZANDO RESUMO COM SPANS EDITÁVEIS ---
     const isFree = pix.includes("FREE");
     document.getElementById("infoPreview").innerHTML = `
         <div class="edit-text title" contenteditable="true" data-key="nomeJogo">${nomeJogo}</div>
-        
         <div class="info-row">
             📍 <span class="edit-text" contenteditable="true" data-key="quadra">${quadra}</span>
             <span class="sep">|</span>
             <span class="edit-text" contenteditable="true" data-key="data" data-placeholder="dd/mm">${data || 'dd/mm'}</span>
             <span class="sep">(</span><span class="edit-text" contenteditable="true" data-key="dia">${dia}</span><span class="sep">)</span>
         </div>
-        
         <div class="info-row">
             🕒 <span class="edit-text" contenteditable="true" data-key="inicio">${inicio}</span> 
             às <span class="edit-text" contenteditable="true" data-key="fim">${fim}</span>
         </div>
-        
         <div class="info-row">
             💰 ${isFree ? '' : 'R$'} <span class="edit-text" contenteditable="true" data-key="valor" style="${isFree ? 'display:none' : ''}">${valor}</span> 
             <span class="sep">(</span><span class="edit-text" contenteditable="true" data-key="limite">${limite}</span> <span class="small-text">pess.</span><span class="sep">)</span> 
@@ -70,34 +72,16 @@ function render() {
         </div>
     `;
 
-    // Lógica para salvar as edições do texto
     document.querySelectorAll('.edit-text').forEach(el => {
-        // Remove formatação ao colar texto
-        el.onpaste = (e) => {
-            e.preventDefault();
-            const text = e.clipboardData.getData("text/plain");
-            document.execCommand("insertHTML", false, text);
-        };
-
-        // Salva ao sair do campo
         el.onblur = () => {
             const key = el.getAttribute('data-key');
-            let val = el.innerText.trim();
-            db.config[key] = val;
+            db.config[key] = el.innerText.trim();
             salvar();
             if(key === 'nomeJogo' || key === 'limite') render();
         };
-
-        // Evita quebra de linha (Enter)
-        el.onkeydown = (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                el.blur();
-            }
-        };
+        el.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } };
     });
 
-    // --- LISTA DE JOGADORES ---
     listaDOM.innerHTML = "";
     // ADM
     const divAdm = document.createElement("div");
@@ -139,7 +123,6 @@ function render() {
     });
 }
 
-// Restante das funções (Modais, Copy, Reorder) permanecem iguais...
 document.getElementById("btnConfig").onclick = () => {
     const c = db.config;
     document.getElementById("cfgModalidade").value = c.modalidade;
@@ -156,18 +139,9 @@ document.getElementById("btnConfig").onclick = () => {
     abrirModal('modalConfig');
 };
 
-document.getElementById("cfgModalidade").onchange = (e) => {
-    const sel = presets[e.target.value];
-    if(sel) {
-        Object.keys(sel).forEach(key => {
-            const el = document.getElementById(`cfg${key.charAt(0).toUpperCase() + key.slice(1)}`);
-            if(el) el.value = sel[key];
-        });
-    }
-};
-
 document.getElementById("btnSalvarConfig").onclick = () => {
     db.config = {
+        ...db.config,
         modalidade: document.getElementById("cfgModalidade").value,
         nomeJogo: document.getElementById("cfgNomeJogo").value,
         quadra: document.getElementById("cfgQuadra").value,
@@ -201,16 +175,20 @@ document.getElementById("btnCopyWhatsapp").onclick = () => {
     let texto = `*${c.nomeJogo}*\n`;
     texto += `📍 ${c.quadra.toUpperCase()} | ${c.data} (${c.dia}) | ${c.inicio} às ${c.fim}\n`;
     texto += `💰 ${isFree ? '' : 'R$' + c.valor} (${c.limite} pessoas) | ${isFree ? c.pix : 'Pix: ' + c.pix}\n\n`;
+    
     texto += `1 - ${c.adm} ✅\n`;
+
     db.jogadores.forEach((j, i) => {
         const pos = i + 2;
         if (pos === c.limite + 1) texto += `\n*Lista de Espera ⏰*\n`;
-        texto += `${pos} - ${j.nome}\n`;
+        // Se o nome for vazio, copia apenas o número e o traço
+        let nomeFinal = j.nome ? j.nome : "";
+        texto += `${pos} - ${nomeFinal}\n`;
     });
     navigator.clipboard.writeText(texto).then(() => alert("Copiado com sucesso!"));
 };
 
-document.getElementById("btnClearAll").onclick = () => { if(confirm("Limpar jogadores?")) { db.jogadores = []; salvar(); render(); } };
+document.getElementById("btnClearAll").onclick = () => { if(confirm("Limpar lista?")) { db.jogadores = []; salvar(); render(); } };
 
 function reordenarItens() {
     const novos = [];

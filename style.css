@@ -6,7 +6,6 @@
     --color-allstars: #7B2CBF;
     --color-elax: #A29BFE;
     --color-praia: #00B4D8;
-    
     --bg-app: #F0F2F5;
     --text-dark: #1D1D1F;
     --text-muted: #636E72;
@@ -22,7 +21,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .row-gap { display: flex; gap: 10px; width: 100%; margin-bottom: 10px; }
 .row-gap > div { flex: 1; }
 
-/* --- HEADER --- */
+/* HEADER */
 .header-compact {
     padding: 18px 0; position: sticky; top: 0; z-index: 10;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-bottom: 4px solid transparent; border-image: var(--rainbow) 1;
@@ -35,7 +34,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .header-compact h1 { color: white; font-size: 15px; margin: 0; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; }
 .btn-menu { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 18px; cursor: pointer; padding: 8px; border-radius: 50%; width: 38px; height: 38px; }
 
-/* --- SELETOR CATEGORIAS --- */
+/* CATEGORIAS */
 .nav-categorias { display: flex; flex-wrap: wrap; gap: 10px; padding: 15px 0; justify-content: center; }
 .btn-cat { white-space: nowrap; padding: 8px 14px; border-radius: 20px; border: none; background: white; color: var(--text-muted); font-weight: 700; font-size: 11px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 .btn-cat.active { color: white !important; }
@@ -44,7 +43,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .btn-cat[data-id*="ELAX"].active { background: var(--color-elax); }
 .btn-cat[data-id*="PRAIA"].active { background: var(--color-praia); }
 
-/* --- INFO CARD (RESUMO) --- */
+/* INFO CARD (RESUMO) */
 .info-card { 
     background: white; padding: 18px; border-radius: 20px; margin-bottom: 20px; 
     box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 2px solid var(--color-todes); line-height: 1.6;
@@ -62,11 +61,11 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .sep { opacity: 0.4; padding: 0 4px; }
 .small-text { font-size: 11px; opacity: 0.7; }
 
-/* --- LISTA JOGADORES --- */
+/* LISTA JOGADORES */
 .item-compra { 
     display: flex; align-items: center; padding: 12px 10px; background: white; 
     margin-bottom: 8px; border-radius: 12px; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); 
-    position: relative; /* Importante para o ADM não voar */
+    position: relative;
 }
 .drag-handle { color: #CCC; cursor: grab; font-size: 18px; padding: 0 5px; }
 .num { background: var(--bg-app); font-weight: 800; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
@@ -76,12 +75,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .theme-elax .num { color: var(--color-elax); }
 .theme-praia .num { color: var(--color-praia); }
 
-/* --- ESTILO ADM CORRIGIDO --- */
-.is-adm { 
-    border: 1px solid rgba(0,0,0,0.05);
-}
-
-/* Fundo suave do ADM por tema */
+/* ESTILO ADM */
+.is-adm { border: 1px solid rgba(0,0,0,0.05); z-index: 1; }
 .theme-todes .is-adm { background-color: #FFF0F6; }
 .theme-allstars .is-adm { background-color: #F3E8FF; }
 .theme-elax .is-adm { background-color: #F0EFFF; }
@@ -92,28 +87,28 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
     position: absolute; 
     right: 12px; 
     top: 50%;
-    transform: translateY(-50%); /* Centraliza verticalmente no meio da linha */
+    transform: translateY(-50%);
     font-size: 9px; 
     color: white; 
     padding: 3px 10px; 
     border-radius: 20px; 
     font-weight: 900;
+    z-index: 5;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-
-/* Cor do selo ADM por tema */
 .theme-todes .is-adm::after { background: var(--color-todes); }
 .theme-allstars .is-adm::after { background: var(--color-allstars); }
 .theme-elax .is-adm::after { background: var(--color-elax); }
 .theme-praia .is-adm::after { background: var(--color-praia); }
 
-.input-item { background: transparent; border: none; font-size: 15px; color: var(--text-dark); flex: 1; outline: none; font-weight: 500; min-height: 20px; padding-right: 40px; /* Espaço para o selo ADM não cobrir o texto */ }
+.input-item { background: transparent; border: none; font-size: 15px; color: var(--text-dark); flex: 1; outline: none; font-weight: 500; min-height: 20px; padding-right: 40px; }
 .btn-del { background: #FEE2E2; color: var(--danger); border: none; font-size: 18px; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
 
-/* --- OUTROS ELEMENTOS --- */
+/* DIVISOR */
 .espera-divider { background: var(--waiting); color: white; text-align: center; font-weight: 700; padding: 10px; border-radius: 10px; margin: 15px 0 10px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; }
 .modo-espera { background-color: #F8F9FD; border: 1px dashed #D1D8E0; opacity: 0.8; }
 
+/* BOTÕES RODAPÉ */
 .bottom-actions { padding-bottom: 40px; display: flex; flex-direction: column; gap: 10px; }
 .btn { font-family: inherit; font-weight: 700; cursor: pointer; border-radius: 14px; border: none; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
 .btn-main { color: white; padding: 18px; font-size: 13px; width: 100%; transition: background 0.4s; }
@@ -126,7 +121,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .btn-sub { background: white; border: 2px solid var(--accent) !important; color: var(--accent); padding: 14px; font-size: 11px; width: 100%; }
 .btn-sub.danger { border-color: #FDA7A7 !important; color: var(--danger); }
 
-/* --- MODAL --- */
+/* MODAIS */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; padding: 15px; backdrop-filter: blur(4px); }
 .modal-content { background: white; padding: 20px; border-radius: 24px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
 .input-modal { border: 2px solid var(--bg-app); padding: 12px; border-radius: 12px; width: 100%; font-family: inherit; margin-bottom: 5px; font-size: 14px; }
