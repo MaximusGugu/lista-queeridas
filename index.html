@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vôlei Todes - Lista</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-planetario">
+    <header class="header-compact">
+        <div class="container row-between">
+            <h1 id="tituloApp">VÔLEI DE QUADRA TODES 🏳️‍🌈</h1>
+            <button id="btnConfig" class="btn-menu">⚙️</button>
+        </div>
+    </header>
+
+    <main class="container">
+        <div id="infoPreview" class="info-card">
+            <!-- Preenchido via JS -->
+        </div>
+
+        <div id="listaJogadores" class="list-container">
+            <!-- Itens (Jogadores) -->
+        </div>
+        
+        <div class="bottom-actions">
+            <button id="btnOpenImport" class="btn btn-main">COLAR LISTA DE NOMES</button>
+            <button id="btnCopyWhatsapp" class="btn btn-sub" style="background: #25D366; color: white; border: none !important;">
+                COPY PARA WHATSAPP
+            </button>
+            <div class="row-gap">
+                <button id="btnClearAll" class="btn btn-sub danger">LIMPAR TUDO</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Configurações do Evento -->
+    <div id="modalConfig" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3>Configurar Evento</h3>
+            <div class="campo-modal">
+                <label>📍 Quadra:</label>
+                <input type="text" id="cfgQuadra" class="input-modal" placeholder="Ex: Dom Bosco">
+            </div>
+            <div class="row-gap" style="margin-top:10px">
+                <div style="flex:2">
+                    <label>📅 Data:</label>
+                    <input type="text" id="cfgData" class="input-modal" placeholder="01/07">
+                </div>
+                <div style="flex:1">
+                    <label>📅 Dia:</label>
+                    <input type="text" id="cfgDia" class="input-modal" placeholder="Quarta-Feira">
+                </div>
+            </div>
+            <div class="row-gap" style="margin-top:10px">
+                <div>
+                    <label>🕒 Início:</label>
+                    <input type="text" id="cfgInicio" class="input-modal" placeholder="20h30">
+                </div>
+                <div>
+                    <label>🕒 Fim:</label>
+                    <input type="text" id="cfgFim" class="input-modal" placeholder="22h30">
+                </div>
+            </div>
+            <div class="row-gap" style="margin-top:10px">
+                <div>
+                    <label>💰 Valor:</label>
+                    <input type="text" id="cfgValor" class="input-modal" placeholder="15,00">
+                </div>
+                <div>
+                    <label>👥 Limite:</label>
+                    <input type="number" id="cfgLimite" class="input-modal" value="21">
+                </div>
+            </div>
+            <div class="campo-modal" style="margin-top:10px">
+                <label>🔑 Pix:</label>
+                <input type="text" id="cfgPix" class="input-modal" placeholder="Chave pix e info">
+            </div>
+
+            <div class="modal-buttons" style="margin-top:20px;">
+                <button id="btnSalvarConfig" class="btn btn-main">SALVAR</button>
+                <button class="btn btn-sub" onclick="fecharModal('modalConfig')">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Importar Nomes -->
+    <div id="modalImport" class="modal-overlay" style="display:none;">
+        <div class="modal-content">
+            <h3>Colar Nomes</h3>
+            <p style="font-size: 12px; opacity: 0.7;">Cole um nome abaixo do outro (vindo do Forms ou WhatsApp)</p>
+            <textarea id="textoNomesBulk" placeholder="João Silva&#10;Maria Souza..."></textarea>
+            <div class="modal-buttons">
+                <button id="btnConfirmarImport" class="btn btn-main">GERAR LISTA</button>
+                <button class="btn btn-sub" onclick="fecharModal('modalImport')">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

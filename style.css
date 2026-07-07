@@ -1,0 +1,57 @@
+/* Customizações para o App de Vôlei */
+
+.info-card {
+    background: var(--P01);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border-left: 5px solid var(--P04);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.num {
+    font-weight: bold;
+    color: var(--P04);
+    min-width: 25px;
+}
+
+.espera-divider {
+    background: #e74c3c;
+    color: white;
+    text-align: center;
+    font-weight: bold;
+    padding: 8px;
+    border-radius: 8px;
+    margin: 15px 0 10px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.modo-espera {
+    background-color: rgba(0,0,0,0.03);
+}
+
+.modo-espera .num {
+    color: var(--P06);
+}
+
+.campo-modal label {
+    display: block;
+    font-size: 11px;
+    font-weight: bold;
+    margin-bottom: 2px;
+    color: var(--P06);
+}
+
+/* Ajuste no padding do container da lista para não colar no divisor */
+.list-container {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Melhoria no visual dos inputs de texto na lista */
+.input-item {
+    font-weight: 500;
+}
