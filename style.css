@@ -1,189 +1,138 @@
-/* --- RESET E VARIÁVEIS QUEERIDAS --- */
+/* --- CONFIGURAÇÕES GERAIS --- */
 * { box-sizing: border-box; }
 
 :root {
-    --primary: #FF0080;        /* Rosa Queeridas */
-    --secondary: #7B2CBF;      /* Roxo Vibrante */
-    --accent: #00B4D8;         /* Azul Piscina */
-    --bg-light: #FDFEFE;       /* Fundo quase branco */
-    --bg-app: #F0F2F5;         /* Fundo cinza claro */
-    --text-dark: #1D1D1F;      /* Texto principal */
-    --text-muted: #636E72;     /* Texto secundário */
-    --success: #00D084;        /* Verde para pago/confirmado */
-    --danger: #FF4757;         /* Vermelho para exclusão/limpar */
-    --waiting: #574B90;        /* Roxo escuro para lista de espera */
+    --color-todes: #FF0080;
+    --color-allstars: #7B2CBF;
+    --color-elax: #A29BFE;
+    --color-praia: #00B4D8;
     
+    --bg-app: #F0F2F5;
+    --text-dark: #1D1D1F;
+    --text-muted: #636E72;
+    --danger: #FF4757;
+    --waiting: #574B90;
     --rainbow: linear-gradient(90deg, #FF0018, #FFA52C, #FFFF41, #008018, #0000F9, #86007D);
 }
 
-body {
-    font-family: 'DM Sans', sans-serif;
-    background-color: var(--bg-app);
-    color: var(--text-dark);
-    margin: 0; padding: 0;
-    line-height: 1.4;
-}
+body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); color: var(--text-dark); margin: 0; padding: 0; }
 
 .container { padding: 0 15px; max-width: 600px; margin: 0 auto; width: 100%; }
 .row-between { display: flex; justify-content: space-between; align-items: center; }
-.row-gap { display: flex; gap: 10px; width: 100%; }
-.row-gap button { flex: 1; }
+.row-gap { display: flex; gap: 10px; width: 100%; margin-bottom: 10px; }
+.row-gap > div { flex: 1; }
 
 /* --- HEADER --- */
 .header-compact {
-    background: var(--secondary);
-    background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
-    padding: 18px 0;
-    position: sticky; top: 0; z-index: 10;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    border-bottom: 4px solid transparent;
-    border-image: var(--rainbow) 1;
+    padding: 18px 0; position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-bottom: 4px solid transparent; border-image: var(--rainbow) 1;
 }
-.header-compact h1 { 
+.theme-todes .header-compact { background: linear-gradient(135deg, var(--color-todes) 0%, #7B2CBF 100%); }
+.theme-allstars .header-compact { background: linear-gradient(135deg, var(--color-allstars) 0%, #574B90 100%); }
+.theme-elax .header-compact { background: linear-gradient(135deg, var(--color-elax) 0%, #6C5CE7 100%); }
+.theme-praia .header-compact { background: linear-gradient(135deg, var(--color-praia) 0%, #0077B6 100%); }
+
+.header-compact h1 { color: white; font-size: 15px; margin: 0; letter-spacing: 1px; font-weight: 700; text-transform: uppercase; }
+.btn-menu { background: rgba(255,255,255,0.2); border: none; color: white; font-size: 18px; cursor: pointer; padding: 8px; border-radius: 50%; width: 38px; height: 38px; }
+
+/* --- SELETOR CATEGORIAS --- */
+.nav-categorias { display: flex; flex-wrap: wrap; gap: 10px; padding: 15px 0; justify-content: center; }
+.btn-cat { white-space: nowrap; padding: 8px 14px; border-radius: 20px; border: none; background: white; color: var(--text-muted); font-weight: 700; font-size: 11px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.btn-cat.active { color: white !important; }
+.btn-cat[data-id*="TODES"].active { background: var(--color-todes); }
+.btn-cat[data-id*="ALLSTARS"].active { background: var(--color-allstars); }
+.btn-cat[data-id*="ELAX"].active { background: var(--color-elax); }
+.btn-cat[data-id*="PRAIA"].active { background: var(--color-praia); }
+
+/* --- INFO CARD (RESUMO) --- */
+.info-card { 
+    background: white; padding: 18px; border-radius: 20px; margin-bottom: 20px; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05); border: 2px solid var(--color-todes); line-height: 1.6;
+}
+.theme-todes .info-card { border-color: var(--color-todes); }
+.theme-allstars .info-card { border-color: var(--color-allstars); }
+.theme-elax .info-card { border-color: var(--color-elax); }
+.theme-praia .info-card { border-color: var(--color-praia); }
+
+.edit-text { outline: none; border-radius: 4px; transition: background 0.2s; padding: 0 2px; display: inline-block; min-width: 10px; }
+.edit-text:focus { background: rgba(0,0,0,0.05); }
+.edit-text.title { display: block; font-size: 18px; font-weight: 800; color: var(--secondary); text-transform: uppercase; margin-bottom: 8px; }
+
+.info-row { font-size: 14px; color: var(--text-muted); word-wrap: break-word; }
+.sep { opacity: 0.4; padding: 0 4px; }
+.small-text { font-size: 11px; opacity: 0.7; }
+
+/* --- LISTA JOGADORES --- */
+.item-compra { 
+    display: flex; align-items: center; padding: 12px 10px; background: white; 
+    margin-bottom: 8px; border-radius: 12px; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); 
+    position: relative; /* Importante para o ADM não voar */
+}
+.drag-handle { color: #CCC; cursor: grab; font-size: 18px; padding: 0 5px; }
+.num { background: var(--bg-app); font-weight: 800; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+
+.theme-todes .num { color: var(--color-todes); }
+.theme-allstars .num { color: var(--color-allstars); }
+.theme-elax .num { color: var(--color-elax); }
+.theme-praia .num { color: var(--color-praia); }
+
+/* --- ESTILO ADM CORRIGIDO --- */
+.is-adm { 
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Fundo suave do ADM por tema */
+.theme-todes .is-adm { background-color: #FFF0F6; }
+.theme-allstars .is-adm { background-color: #F3E8FF; }
+.theme-elax .is-adm { background-color: #F0EFFF; }
+.theme-praia .is-adm { background-color: #E0F7FA; }
+
+.is-adm::after { 
+    content: "ADM"; 
+    position: absolute; 
+    right: 12px; 
+    top: 50%;
+    transform: translateY(-50%); /* Centraliza verticalmente no meio da linha */
+    font-size: 9px; 
     color: white; 
-    font-size: 16px; 
-    margin: 0; 
-    letter-spacing: 1.5px; 
-    font-weight: 700;
-    text-transform: uppercase;
+    padding: 3px 10px; 
+    border-radius: 20px; 
+    font-weight: 900;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.btn-menu {
-    background: rgba(255,255,255,0.2); 
-    border: none;
-    color: white; 
-    font-size: 20px;
-    cursor: pointer; 
-    padding: 8px;
-    border-radius: 50%;
-    width: 40px; height: 40px;
-    display: flex; align-items: center; justify-content: center;
-}
+/* Cor do selo ADM por tema */
+.theme-todes .is-adm::after { background: var(--color-todes); }
+.theme-allstars .is-adm::after { background: var(--color-allstars); }
+.theme-elax .is-adm::after { background: var(--color-elax); }
+.theme-praia .is-adm::after { background: var(--color-praia); }
 
-/* --- INFO CARD --- */
-.info-card {
-    background: white;
-    padding: 15px;
-    border-radius: 16px;
-    margin: 20px 0;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    border-left: 6px solid var(--primary);
-    font-size: 14px;
-}
-.info-card small { color: var(--text-muted); font-weight: 500; }
+.input-item { background: transparent; border: none; font-size: 15px; color: var(--text-dark); flex: 1; outline: none; font-weight: 500; min-height: 20px; padding-right: 40px; /* Espaço para o selo ADM não cobrir o texto */ }
+.btn-del { background: #FEE2E2; color: var(--danger); border: none; font-size: 18px; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
 
-/* --- LISTA DE JOGADORES --- */
-.item-compra {
-    display: flex; align-items: center;
-    padding: 8px 12px; 
-    background-color: white;
-    margin-bottom: 8px;
-    border-radius: 12px;
-    gap: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-}
-.drag-handle { color: #CCC; cursor: grab; font-size: 20px; padding: 0 5px; }
+/* --- OUTROS ELEMENTOS --- */
+.espera-divider { background: var(--waiting); color: white; text-align: center; font-weight: 700; padding: 10px; border-radius: 10px; margin: 15px 0 10px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; }
+.modo-espera { background-color: #F8F9FD; border: 1px dashed #D1D8E0; opacity: 0.8; }
 
-.num {
-    background: var(--bg-app);
-    color: var(--secondary);
-    font-weight: 800;
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px;
-    flex-shrink: 0;
-}
+.bottom-actions { padding-bottom: 40px; display: flex; flex-direction: column; gap: 10px; }
+.btn { font-family: inherit; font-weight: 700; cursor: pointer; border-radius: 14px; border: none; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
+.btn-main { color: white; padding: 18px; font-size: 13px; width: 100%; transition: background 0.4s; }
 
-.input-item { 
-    background: transparent; border: none; 
-    font-size: 15px; color: var(--text-dark); 
-    flex: 1; outline: none; font-weight: 500;
-}
+.theme-todes .btn-main { background: var(--color-todes); }
+.theme-allstars .btn-main { background: var(--color-allstars); }
+.theme-elax .btn-main { background: var(--color-elax); }
+.theme-praia .btn-main { background: var(--color-praia); }
 
-.btn-del { 
-    background: #FEE2E2; color: var(--danger); 
-    border: none; font-size: 18px; 
-    width: 30px; height: 30px; border-radius: 50%;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-}
+.btn-sub { background: white; border: 2px solid var(--accent) !important; color: var(--accent); padding: 14px; font-size: 11px; width: 100%; }
+.btn-sub.danger { border-color: #FDA7A7 !important; color: var(--danger); }
 
-/* --- LISTA DE ESPERA --- */
-.espera-divider {
-    background: var(--waiting);
-    color: white;
-    text-align: center;
-    font-weight: 700;
-    padding: 10px;
-    border-radius: 10px;
-    margin: 20px 0 12px 0;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-}
+/* --- MODAL --- */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; padding: 15px; backdrop-filter: blur(4px); }
+.modal-content { background: white; padding: 20px; border-radius: 24px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
+.input-modal { border: 2px solid var(--bg-app); padding: 12px; border-radius: 12px; width: 100%; font-family: inherit; margin-bottom: 5px; font-size: 14px; }
+textarea { width: 100%; height: 150px; border-radius: 15px; padding: 10px; border: 2px solid var(--bg-app); margin: 10px 0; font-family: inherit; }
+.campo-modal label { display: block; font-size: 10px; font-weight: 700; margin-bottom: 3px; color: var(--text-muted); text-transform: uppercase; }
+.modal-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.modal-buttons .btn { width: 100%; }
 
-.modo-espera {
-    background-color: #F8F9FD;
-    border: 1px dashed #D1D8E0;
-}
-
-/* --- BOTÕES --- */
-.bottom-actions { padding: 20px 0 40px 0; display: flex; flex-direction: column; gap: 12px; }
-
-.btn { 
-    font-family: inherit; font-weight: 700; cursor: pointer; 
-    border-radius: 16px; transition: all 0.2s ease; border: none; 
-    display: flex; align-items: center; justify-content: center; 
-    text-transform: uppercase; letter-spacing: 0.5px;
-}
-
-.btn-main { 
-    width: 100%; 
-    background: var(--primary); 
-    color: white; padding: 18px; font-size: 14px;
-    box-shadow: 0 6px 15px rgba(255, 0, 128, 0.3);
-}
-
-.btn-sub { 
-    background: white; 
-    border: 2px solid var(--accent) !important; 
-    color: var(--accent); padding: 14px; font-size: 12px;
-}
-
-.btn-sub.danger { 
-    border-color: #FDA7A7 !important; color: var(--danger); 
-}
-
-/* --- MODAIS --- */
-.modal-overlay { 
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-    background: rgba(29, 29, 31, 0.85); 
-    display: flex; justify-content: center; align-items: center; 
-    z-index: 100; padding: 15px; backdrop-filter: blur(4px);
-}
-.modal-content { 
-    background: white; padding: 25px; border-radius: 24px; 
-    width: 100%; max-width: 450px; 
-}
-
-.input-modal { 
-    border: 2px solid var(--bg-app); padding: 12px; 
-    border-radius: 12px; width: 100%; font-family: inherit;
-    margin-bottom: 8px; outline: none;
-}
-
-textarea { 
-    width: 100%; height: 150px; border-radius: 16px; padding: 15px; 
-    border: 2px solid var(--bg-app); margin: 10px 0; font-family: inherit; 
-    font-size: 15px; resize: none;
-}
-
-.campo-modal label {
-    display: block; font-size: 11px; font-weight: 700;
-    margin-bottom: 4px; color: var(--text-muted); text-transform: uppercase;
-}
-
-.sortable-ghost {
-    opacity: 0.4;
-    border: 2px dashed var(--primary);
-}
+.sortable-ghost { opacity: 0.2; border: 2px dashed var(--color-todes); }
