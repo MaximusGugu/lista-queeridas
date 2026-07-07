@@ -1,57 +1,198 @@
-/* Customizações para o App de Vôlei */
+/* --- RESET E VARIÁVEIS QUEERIDAS --- */
+* { box-sizing: border-box; }
 
-.info-card {
-    background: var(--P01);
-    padding: 15px;
-    border-radius: 12px;
-    margin-bottom: 20px;
-    border-left: 5px solid var(--P04);
-    font-size: 13px;
-    line-height: 1.6;
+:root {
+    --primary: #FF0080;        /* Rosa Queeridas */
+    --secondary: #7B2CBF;      /* Roxo Vibrante */
+    --accent: #00B4D8;         /* Azul Piscina */
+    --bg-light: #FDFEFE;       /* Fundo quase branco */
+    --bg-app: #F0F2F5;         /* Fundo cinza claro */
+    --text-dark: #1D1D1F;      /* Texto principal */
+    --text-muted: #636E72;     /* Texto secundário */
+    --success: #00D084;        /* Verde para pago/confirmado */
+    --danger: #FF4757;         /* Vermelho para exclusão/limpar */
+    --waiting: #574B90;        /* Roxo escuro para lista de espera */
+    
+    /* Gradiente Arco-Íris para detalhes */
+    --rainbow: linear-gradient(90deg, #FF0018, #FFA52C, #FFFF41, #008018, #0000F9, #86007D);
 }
+
+body {
+    font-family: 'DM Sans', sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-dark);
+    margin: 0; padding: 0;
+    line-height: 1.4;
+}
+
+.container { padding: 0 15px; max-width: 600px; margin: 0 auto; width: 100%; }
+.row-between { display: flex; justify-content: space-between; align-items: center; }
+.row-gap { display: flex; gap: 10px; width: 100%; }
+.row-gap button { flex: 1; }
+
+/* --- HEADER --- */
+.header-compact {
+    background: var(--secondary);
+    background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%);
+    padding: 18px 0;
+    position: sticky; top: 0; z-index: 10;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-bottom: 4px solid transparent;
+    border-image: var(--rainbow) 1; /* Detalhe arco-íris no topo */
+}
+.header-compact h1 { 
+    color: white; 
+    font-size: 16px; 
+    margin: 0; 
+    letter-spacing: 1.5px; 
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.btn-menu {
+    background: rgba(255,255,255,0.2); 
+    border: none;
+    color: white; 
+    font-size: 20px;
+    cursor: pointer; 
+    padding: 8px;
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* --- INFO CARD (Configurações do Evento) --- */
+.info-card {
+    background: white;
+    padding: 15px;
+    border-radius: 16px;
+    margin: 20px 0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border-left: 6px solid var(--primary);
+    font-size: 14px;
+}
+.info-card small { color: var(--text-muted); font-weight: 500; }
+
+/* --- LISTA DE JOGADORES --- */
+.item-compra {
+    display: flex; align-items: center;
+    padding: 12px; 
+    background-color: white;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    gap: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    transition: transform 0.2s;
+}
+.drag-handle { color: #CCC; cursor: grab; font-size: 20px; padding: 0 5px; }
 
 .num {
-    font-weight: bold;
-    color: var(--P04);
-    min-width: 25px;
+    background: var(--bg-app);
+    color: var(--secondary);
+    font-weight: 800;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
 }
 
+.input-item { 
+    background: transparent; border: none; 
+    font-size: 15px; color: var(--text-dark); 
+    flex: 1; outline: none; font-weight: 500;
+}
+
+.btn-del { 
+    background: #FEE2E2; color: var(--danger); 
+    border: none; font-size: 18px; 
+    width: 30px; height: 30px; border-radius: 50%;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+/* --- LISTA DE ESPERA --- */
 .espera-divider {
-    background: #e74c3c;
+    background: var(--waiting);
     color: white;
     text-align: center;
-    font-weight: bold;
-    padding: 8px;
-    border-radius: 8px;
-    margin: 15px 0 10px 0;
+    font-weight: 700;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 20px 0 12px 0;
     font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+    box-shadow: 0 4px 6px rgba(87, 75, 144, 0.3);
 }
 
 .modo-espera {
-    background-color: rgba(0,0,0,0.03);
+    background-color: #F8F9FD;
+    border: 1px dashed #D1D8E0;
+}
+.modo-espera .num { background: #D1D8E0; color: white; }
+
+/* --- BOTÕES --- */
+.bottom-actions { padding: 20px 0 40px 0; display: flex; flex-direction: column; gap: 12px; }
+
+.btn { 
+    font-family: inherit; font-weight: 700; cursor: pointer; 
+    border-radius: 16px; transition: all 0.2s ease; border: none; 
+    display: flex; align-items: center; justify-content: center; 
+    text-transform: uppercase; letter-spacing: 0.5px;
 }
 
-.modo-espera .num {
-    color: var(--P06);
+.btn-main { 
+    width: 100%; 
+    background: var(--primary); 
+    color: white; padding: 18px; font-size: 14px;
+    box-shadow: 0 6px 15px rgba(255, 0, 128, 0.3);
+}
+
+.btn-sub { 
+    background: white; 
+    border: 2px solid var(--accent) !important; 
+    color: var(--accent); padding: 14px; font-size: 12px;
+}
+
+.btn-sub.danger { 
+    border-color: #FDA7A7 !important; color: var(--danger); 
+}
+
+.btn:active { transform: scale(0.96); }
+
+/* --- MODAIS --- */
+.modal-overlay { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(29, 29, 31, 0.85); 
+    display: flex; justify-content: center; align-items: center; 
+    z-index: 100; padding: 15px; backdrop-filter: blur(4px);
+}
+.modal-content { 
+    background: white; padding: 25px; border-radius: 24px; 
+    width: 100%; max-width: 450px; 
+}
+.modal-content h3 { margin-top: 0; color: var(--secondary); }
+
+.input-modal { 
+    border: 2px solid var(--bg-app); padding: 14px; 
+    border-radius: 12px; width: 100%; font-family: inherit;
+    margin-bottom: 10px; outline: none; transition: border 0.2s;
+}
+.input-modal:focus { border-color: var(--primary); }
+
+textarea { 
+    width: 100%; height: 150px; border-radius: 16px; padding: 15px; 
+    border: 2px solid var(--bg-app); margin: 10px 0; font-family: inherit; 
+    font-size: 15px; resize: none; outline: none;
 }
 
 .campo-modal label {
-    display: block;
-    font-size: 11px;
-    font-weight: bold;
-    margin-bottom: 2px;
-    color: var(--P06);
+    display: block; font-size: 11px; font-weight: 700;
+    margin-bottom: 4px; color: var(--text-muted); text-transform: uppercase;
 }
 
-/* Ajuste no padding do container da lista para não colar no divisor */
-.list-container {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Melhoria no visual dos inputs de texto na lista */
-.input-item {
-    font-weight: 500;
+/* Sortable Ghost */
+.sortable-ghost {
+    opacity: 0.4;
+    border: 2px dashed var(--primary);
 }
