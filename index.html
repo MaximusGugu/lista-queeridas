@@ -58,9 +58,23 @@
             <div class="campo-modal"><label>Nome do Jogo:</label><input type="text" id="cfgNomeJogo" class="input-modal"></div>
             <div class="campo-modal"><label>📍 Local/Quadra:</label><input type="text" id="cfgQuadra" class="input-modal"></div>
             <div class="row-gap">
-                <div><label>Data:</label><input type="text" id="cfgData" class="input-modal" placeholder="dd/mm"></div>
-                <div><label>Dia:</label><input type="text" id="cfgDia" class="input-modal"></div>
-            </div>
+    <div>
+        <label>Data:</label>
+        <input type="text" id="cfgData" class="input-modal" placeholder="dd/mm">
+    </div>
+    <div>
+        <label>Dia:</label>
+        <select id="cfgDia" class="input-modal">
+            <option value="Segunda-Feira">Segunda-Feira</option>
+            <option value="Terça-Feira">Terça-Feira</option>
+            <option value="Quarta-Feira">Quarta-Feira</option>
+            <option value="Quinta-Feira">Quinta-Feira</option>
+            <option value="Sexta-Feira">Sexta-Feira</option>
+            <option value="Sábado">Sábado</option>
+            <option value="Domingo">Domingo</option>
+        </select>
+    </div>
+</div>
             <div class="row-gap">
                 <div><label>Início:</label><input type="text" id="cfgInicio" class="input-modal"></div>
                 <div><label>Fim:</label><input type="text" id="cfgFim" class="input-modal"></div>
