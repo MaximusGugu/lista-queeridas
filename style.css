@@ -68,7 +68,7 @@ body {
     border-radius: 16px;
     margin: 20px 0;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    border-left: 6px solid var(--primary);
+    /* border-left: 6px solid var(--primary); */
     font-size: 14px;
 }
 .info-card small { color: var(--text-muted); font-weight: 500; }
@@ -76,7 +76,7 @@ body {
 /* --- LISTA DE JOGADORES --- */
 .item-compra {
     display: flex; align-items: center;
-    padding: 12px; 
+    padding: 6px; 
     background-color: white;
     margin-bottom: 8px;
     border-radius: 12px;
