@@ -162,14 +162,12 @@ window.changeLevelInTeam = async (id, d) => {
     await salvarFirebase();
 };
 
-// --- NOVAS FUNÇÕES DE EDIÇÃO DE TÍTULO ---
 window.prepEditTeam = (el) => {
-    el.dataset.original = el.value; // Salva o valor original
-    el.value = ""; // Apaga o texto ao clicar
+    el.dataset.original = el.value; 
+    el.value = ""; 
 };
 
 window.revertEditTeam = (el) => {
-    // Se saiu sem salvar (Enter), volta o valor que estava antes
     setTimeout(() => {
         if (el.dataset.original !== undefined) {
             el.value = el.dataset.original;
@@ -182,11 +180,11 @@ window.handleTeamKey = (e, el, teamId) => {
     if (e.key === "Enter") {
         const novoNome = el.value.trim();
         if (novoNome !== "") {
-            delete el.dataset.original; // Impede o revert
+            delete el.dataset.original; 
             window.updateTeamName(teamId, novoNome);
             el.blur();
         } else {
-            el.blur(); // Se deixou vazio, o revert vai cuidar de voltar o original
+            el.blur(); 
         }
     }
 };
@@ -211,7 +209,6 @@ function renderTeams() {
         
         const jogadoresOrdenados = ordenarJogadoresTime([...team.players]);
 
-        // Verifica se o nome é o padrão para aplicar a classe CSS correta
         const isDefault = /^Time \d+$/i.test(team.nome);
         const cssClass = isDefault ? "is-default" : "is-custom";
 
@@ -287,6 +284,12 @@ function renderTeams() {
 }
 
 function inicializarEventosTimes() {
+    // CONSERTO: Botão Colar Lista funcionando
+    const btnOpenImport = document.getElementById("btnOpenImport");
+    if(btnOpenImport) {
+        btnOpenImport.onclick = () => window.abrirModal('modalImport');
+    }
+
     const btnImp = document.getElementById("btnConfirmarImport");
     if(btnImp) {
         btnImp.onclick = async () => {

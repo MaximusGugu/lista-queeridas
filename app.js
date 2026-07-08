@@ -1,6 +1,5 @@
 import { db, doc, setDoc, onSnapshot, auth } from "./firebase-config.js";
 
-// --- 1. FUNÇÕES GLOBAIS (MODAIS) ---
 window.abrirModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "flex"; };
 window.fecharModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
 
@@ -19,7 +18,6 @@ const docRef = doc(db, "sistema", "lista_presenca");
 const docBancoRef = doc(db, "sistema", "banco_notas");
 let bancoNotas = {};
 
-// --- 2. INICIALIZAÇÃO FIREBASE ---
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         onSnapshot(docRef, (snap) => {
@@ -53,7 +51,6 @@ async function inicializarBancoNovo() {
     await salvar();
 }
 
-// --- 3. RENDERIZAÇÃO ---
 function render() {
     const listaAtual = db_local.listas[aba_ativa];
     if (!listaAtual) return;
@@ -108,7 +105,8 @@ function renderLista(listaAtual, limite, adm) {
             listaDOM.appendChild(s);
         }
         const div = document.createElement("div");
-        div.className = `item-compra ${pos > limite ? 'modo-espera' : ''}`;
+        // ADICIONADO: Classe is-pago se jog.pago for true
+        div.className = `item-compra ${pos > limite ? 'modo-espera' : ''} ${jog.pago ? 'is-pago' : ''}`;
         div.setAttribute('data-id', jog.id);
         div.innerHTML = `
             <div class="drag-handle">⠿</div>
@@ -128,7 +126,6 @@ function renderLista(listaAtual, limite, adm) {
     }
 }
 
-// --- 4. FUNÇÕES DE SUPORTE ---
 function formatarNome(n) { return n ? n.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ""; }
 
 function encontrarFuzzyMatch(nomeImportado, banco) {
@@ -183,12 +180,10 @@ async function fecharListaEMontarTimes(listaAtual) {
         return { nome: nFormatado, level: 3, allStars: false, locked: false };
     };
 
-    // Adiciona ADM
     if (listaAtual.config.adm) {
         pagantes.push({ id: "adm-" + Date.now(), ...obterDadosCompleto(listaAtual.config.adm) });
     }
 
-    // Adiciona Jogadores que estão no limite e preenchidos
     listaAtual.jogadores.slice(0, listaAtual.config.limite - 1).forEach(j => {
         if (j.nome && j.nome.trim() !== "") {
             pagantes.push({ id: j.id, ...obterDadosCompleto(j.nome) });
@@ -197,7 +192,6 @@ async function fecharListaEMontarTimes(listaAtual) {
 
     const docTimesRef = doc(db, "sistema", "montador_times");
     try {
-        // Importante: Resetar times e fase ao fechar nova lista
         await setDoc(docTimesRef, { 
             players: pagantes, 
             teams: [], 

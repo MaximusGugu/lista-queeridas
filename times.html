@@ -43,7 +43,6 @@
     .team-section { margin-bottom: 25px; }
     .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 5px; }
     
-    /* --- ESTILO TÍTULO DO TIME --- */
     .team-title { 
         font-size: 22px; 
         font-weight: 800; 
@@ -56,16 +55,14 @@
         border-bottom: 2px solid transparent;
     }
 
-    /* ESTADO 1: Nome Padrão (Time 1, 2...) */
     .team-title.is-default {
-        color: #b2bec3; /* Cinza claro */
-        border-bottom: 2px dotted #dfe6e9; /* Sublinhado pontilhado */
+        color: #b2bec3; 
+        border-bottom: 2px dotted #dfe6e9; 
     }
 
-    /* ESTADO 2: Nome Customizado */
     .team-title.is-custom {
-        color: #2d3436; /* Cinza escuro/Preto */
-        border-bottom: 2px solid transparent; /* Sem sublinhado */
+        color: #2d3436; 
+        border-bottom: 2px solid transparent; 
     }
 
     .team-title:focus {
@@ -104,28 +101,6 @@
     .btn-lock.locked {
         background: #22c55e !important;
         color: white !important;
-    }
-
-    .toast-copiado {
-        position: fixed;
-        background: #333;
-        color: white;
-        padding: 6px 15px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 700;
-        pointer-events: none;
-        z-index: 9999;
-        transform: translate(-50%, -100%);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        animation: toastPop 1s ease-out forwards;
-    }
-
-    @keyframes toastPop {
-        0% { opacity: 0; transform: translate(-50%, -50%); }
-        20% { opacity: 1; transform: translate(-50%, -100%); }
-        80% { opacity: 1; transform: translate(-50%, -100%); }
-        100% { opacity: 0; transform: translate(-50%, -150%); }
     }
 </style>
 </head>

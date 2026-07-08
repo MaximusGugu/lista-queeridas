@@ -10,6 +10,9 @@ auth.onAuthStateChanged((user) => {
     if (user) {
         onSnapshot(docBancoRef, (snap) => {
             banco = snap.exists() ? snap.data() : {};
+            // Esconde o spinner assim que recebe os dados
+            const spinner = document.getElementById("loadingSpinner");
+            if(spinner) spinner.style.display = "none";
             renderBanco();
         });
     } else { window.location.href = "login.html"; }
@@ -31,14 +34,28 @@ window.ajustarNovoNivel = (v) => {
 
 window.adicionarAoBanco = async () => {
     const input = document.getElementById('addNome');
+    const inputApelidos = document.getElementById('addApelidos'); // Captura o novo campo
     const checkAllStars = document.getElementById('addAllStars');
+    
     const nome = formatarNome(input.value.trim());
+    const apelidos = inputApelidos.value.trim(); // Pega os apelidos digitados
+
     if(!nome) return;
-    banco[nome] = { level: nivelTemporario, allStars: checkAllStars ? checkAllStars.checked : false, apelidos: "" };
+    
+    // Salva incluindo os apelidos
+    banco[nome] = { 
+        level: nivelTemporario, 
+        allStars: checkAllStars ? checkAllStars.checked : false, 
+        apelidos: apelidos 
+    };
+
+    // Limpa os campos
     input.value = "";
+    inputApelidos.value = ""; 
     if (checkAllStars) checkAllStars.checked = false;
     nivelTemporario = 3;
     document.getElementById('novoNivel').innerText = 3;
+    
     await salvarFirebase();
 };
 
@@ -114,7 +131,11 @@ window.importarNotas = (event) => {
 function renderBanco() {
     const container = document.getElementById("listaBanco");
     if (!container) return;
+    // Remove tudo exceto o spinner (que já deve estar oculto, mas por segurança)
+    const spinner = document.getElementById("loadingSpinner");
     container.innerHTML = "";
+    if(spinner) container.appendChild(spinner);
+
     const chaves = Object.keys(banco).filter(k => k !== "versao").sort();
     chaves.forEach(nome => {
         const info = banco[nome];

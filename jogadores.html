@@ -98,8 +98,14 @@
         <!-- FORMULÁRIO ADICIONAR (Estilo Info-Card) -->
         <div class="add-form">
             <div class="campo-modal">
-                <label>Nome Completo ou Apelido:</label>
-                <input type="text" id="addNome" class="input-modal" placeholder="Ex: Will Echeverria" style="margin-bottom: 15px;">
+                <label>Nome Completo:</label>
+                <input type="text" id="addNome" class="input-modal" placeholder="Gustavo José" style="margin-bottom: 15px;">
+            </div>
+
+            <!-- NOVO CAMPO DE APELIDOS -->
+            <div class="campo-modal">
+                <label>Apelidos / Como ele escreve:</label>
+                <input type="text" id="addApelidos" class="input-modal" placeholder="Ex: Gustavo S, Gugu. Gu S" style="margin-bottom: 15px;">
             </div>
             
             <div class="row-between" style="align-items: center; gap: 15px; margin-bottom: 15px;">
@@ -121,7 +127,12 @@
 
         <p class="label-instrucao">Jogadores Cadastrados:</p>
         <div id="listaBanco" class="list-container">
-            <!-- Renderizado via JS -->
+            <!-- Spinner de Carregamento -->
+            <div id="loadingSpinner" class="spinner-container">
+                <div class="spinner"></div>
+                <p style="font-size: 11px; font-weight: bold; color: var(--text-muted);">CARREGANDO BANCO...</p>
+            </div>
+            <!-- Lista será injetada aqui -->
         </div>
 
     </main>
@@ -137,7 +148,7 @@
 
         <div class="campo-modal" style="margin-top: 15px;">
             <label>Apelidos / Como ele escreve (separe por vírgula):</label>
-            <input type="text" id="editApelidos" class="input-modal" placeholder="Ex: Leo, Leozinho, Garcez">
+            <input type="text" id="editApelidos" class="input-modal" placeholder="Ex: Gustavo S, Gugu. Gu S">
         </div>
         
         <div class="campo-modal" style="margin-top: 15px;">
