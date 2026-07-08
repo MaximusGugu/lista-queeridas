@@ -85,11 +85,18 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 
 /* --- LISTA JOGADORES --- */
 .item-compra { 
-    display: flex; align-items: center; padding: 8px 10px; margin-bottom: 6px; gap: 10px;
-    background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
-    border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.3); border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; /* Garante que o check e o X fiquem na direita */
+    padding: 8px 10px; 
+    margin-bottom: 6px; 
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.5); 
+    backdrop-filter: blur(5px); 
+    border-radius: 12px; 
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     position: relative;
-    min-height: 42px;
+    min-height: 48px;
 }
 
 .drag-handle { color: #CCC; cursor: grab; font-size: 16px; padding: 0 2px; display: flex; align-items: center; }
@@ -101,14 +108,23 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .theme-praia .num { background-color: #E0F7FA; color: var(--color-praia); }
 
 .input-item { 
-    background: transparent; border: none; font-size: 14px; color: var(--text-dark); 
-    flex: 1; outline: none; font-weight: 500; 
-    display: flex; align-items: center;
-    min-height: 24px; padding-right: 40px; 
+    background: transparent; 
+    border: none; 
+    font-size: 14px; 
+    color: var(--text-dark); 
+    flex: 1; 
+    outline: none; 
+    font-weight: 500; 
+    min-height: 24px;
     line-height: 1.2;
+    display: flex;
+    align-items: center;
 }
 
 .is-adm { border: 1px solid rgba(0,0,0,0.05); z-index: 1; }
+.is-adm .input-item {
+    padding-right: 10px; /* Reduzi o padding já que não tem o selo ADM fixo e nem check */
+}
 .theme-todes .is-adm { background-color: #FFF0F6; }
 .theme-allstars .is-adm { background-color: #F3E8FF; }
 .theme-elax .is-adm { background-color: #F0EFFF; }
@@ -142,14 +158,14 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
     position: fixed;
     background: var(--text-dark);
     color: white;
-    padding: 6px 12px;
+    padding: 6px 15px;
     border-radius: 20px;
     font-size: 11px;
     font-weight: 700;
     pointer-events: none;
     z-index: 9999;
     transform: translate(-50%, -100%);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     animation: toastPop 1s ease-out forwards;
 }
 
@@ -179,3 +195,112 @@ textarea { width: 100%; height: 120px; border-radius: 12px; padding: 10px; borde
 .modal-buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
 
 .sortable-ghost { opacity: 0.2; border: 2px dashed var(--color-todes); }
+
+/* --- CHECKBOX DE PAGAMENTO ESTILO REFERÊNCIA --- */
+.check-pago {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 26px;
+    height: 26px;
+    border: 2px solid #b3b3b3; /* Borda cinza mais grossa conforme seu print */
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    background-color: white;
+    margin-right: 5px;
+    padding: 0;
+    display: block; /* Mudado para block para o background-position funcionar melhor */
+}
+
+/* Estado Marcado */
+.check-pago:checked {
+    background-color: #63E6BE; /* Verde vibrante */
+    border-color: #7f8c8d; /* Mantém a borda cinza conforme o print */
+    
+    /* Ícone do check via background */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center; /* Centraliza o ícone perfeitamente */
+    background-size: 14px; /* Tamanho do check interno */
+}
+
+/* --- BOTÃO FECHAR LISTA (DENTRO DA LISTA) --- */
+.btn-fechar-lista {
+    width: 100%;
+    background: #00b4d8;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 13px;
+    margin: 10px 0;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 180, 216, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.btn-fechar-lista:active {
+    transform: scale(0.98);
+}
+
+.btn-fechar-lista:hover {
+    background: #0096c7;
+}
+
+/* --- BOTTOM NAVIGATION (ESTILO APP) --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    display: flex;
+    justify-content: space-around;
+    padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); /* Suporte para iPhone X+ */
+    border-top: 1px solid rgba(0,0,0,0.05);
+    z-index: 1000;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+}
+
+.nav-link {
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.nav-icon {
+    font-size: 20px;
+}
+
+.nav-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Cor ativa dinâmica baseada no tema da página */
+.nav-link.active {
+    transform: translateY(-2px);
+}
+
+.theme-todes .nav-link.active { color: var(--color-todes); }
+.theme-allstars .nav-link.active { color: var(--color-allstars); }
+.theme-elax .nav-link.active { color: var(--color-elax); }
+.theme-praia .nav-link.active { color: var(--color-praia); }
+
+/* Ajuste no container principal para não ficar atrás da barra */
+main.container {
+    padding-bottom: 100px !important;
+}

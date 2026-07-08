@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Queeridas</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏳️‍🌈</text></svg>">
+</head>
+<body class="theme-allstars" style="display:flex; align-items:center; justify-content:center; height:100vh; padding:20px;">
+    <div class="info-card" style="max-width:350px; text-align:center; border-left:none; border: 2px solid var(--color-allstars);">
+        <h2 style="color:var(--text-dark); margin-bottom:5px;">QUEERIDAS 🏳️‍🌈</h2>
+        <p style="font-size:12px; opacity:0.7;">Acesso Restrito à Comunidade</p>
+        
+        <input type="email" id="email" class="input-modal" placeholder="E-mail" style="margin-top:20px;">
+        <input type="password" id="senha" class="input-modal" placeholder="Senha" style="margin-top:10px;">
+        
+        <button id="btnLogin" class="btn btn-main" style="margin-top:20px; background:var(--color-todes)">ENTRAR NO APP</button>
+    </div>
+
+    <script type="module">
+        import { auth, signInWithEmailAndPassword } from "./firebase-config.js";
+        document.getElementById("btnLogin").onclick = async () => {
+            const e = document.getElementById("email").value;
+            const s = document.getElementById("senha").value;
+            try {
+                await signInWithEmailAndPassword(auth, e, s);
+                window.location.href = "index.html";
+            } catch (err) { alert("Credenciais Inválidas"); }
+        };
+    </script>
+</body>
+</html>

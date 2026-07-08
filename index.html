@@ -38,71 +38,86 @@
         </div>
     </main>
 
+    <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-link active">
+            <span class="nav-icon">📝</span>
+            <span class="nav-label">Presença</span>
+        </a>
+        <a href="times.html" class="nav-link">
+            <span class="nav-icon">⚖️</span>
+            <span class="nav-label">Times</span>
+        </a>
+        <a href="jogadores.html" class="nav-link">
+            <span class="nav-icon">👥</span>
+            <span class="nav-label">Banco</span>
+        </a>
+    </nav>
+
+    <!-- Modais omitidos para brevidade, mas devem continuar no seu arquivo -->
     <div id="modalConfig" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
-            <h3>Configurar Evento</h3>
-            <div class="campo-modal">
-                <label>Modalidade:</label>
-                <select id="cfgModalidade" class="input-modal">
-                    <option value="TODES_QUARTA">TODES (Quarta-feira)</option>
-                    <option value="TODES_SEXTA">TODES (Sexta-feira)</option>
-                    <option value="ALLSTARS_QUARTA">ALL STARS (Quarta-feira)</option>
-                    <option value="ALLSTARS_SABADO">ALL STARS (Sábado)</option>
-                    <option value="ELAX_QUINTA">ELAX (Quinta-feira)</option>
-                    <option value="PRAIA_DOMINGO">PRAIA (Domingo)</option>
+    <div class="modal-content">
+        <h3>Configurar Evento</h3>
+        <div class="campo-modal">
+            <label>Modalidade:</label>
+            <select id="cfgModalidade" class="input-modal">
+                <option value="TODES_QUARTA">TODES (Quarta-feira)</option>
+                <option value="TODES_SEXTA">TODES (Sexta-feira)</option>
+                <option value="ALLSTARS_QUARTA">ALL STARS (Quarta-feira)</option>
+                <option value="ALLSTARS_SABADO">ALL STARS (Sábado)</option>
+                <option value="ELAX_QUINTA">ELAX (Quinta-feira)</option>
+                <option value="PRAIA_DOMINGO">PRAIA (Domingo)</option>
+            </select>
+        </div>
+        <div class="campo-modal">
+            <label>ADM do Dia:</label>
+            <input type="text" id="cfgAdm" class="input-modal">
+        </div>
+        <div class="campo-modal"><label>Nome do Jogo:</label><input type="text" id="cfgNomeJogo" class="input-modal"></div>
+        <div class="campo-modal"><label>📍 Local/Quadra:</label><input type="text" id="cfgQuadra" class="input-modal"></div>
+        <div class="row-gap">
+            <div><label>Data:</label><input type="text" id="cfgData" class="input-modal" placeholder="dd/mm"></div>
+            <div><label>Dia:</label>
+                <select id="cfgDia" class="input-modal">
+                    <option value="Segunda-Feira">Segunda-Feira</option>
+                    <option value="Terça-Feira">Terça-Feira</option>
+                    <option value="Quarta-Feira">Quarta-Feira</option>
+                    <option value="Quinta-Feira">Quinta-Feira</option>
+                    <option value="Sexta-Feira">Sexta-Feira</option>
+                    <option value="Sábado">Sábado</option>
+                    <option value="Domingo">Domingo</option>
                 </select>
             </div>
-            <div class="campo-modal">
-                <label>ADM do Dia:</label>
-                <input type="text" id="cfgAdm" class="input-modal">
-            </div>
-            <div class="campo-modal"><label>Nome do Jogo:</label><input type="text" id="cfgNomeJogo" class="input-modal"></div>
-            <div class="campo-modal"><label>📍 Local/Quadra:</label><input type="text" id="cfgQuadra" class="input-modal"></div>
-            <div class="row-gap">
-                <div>
-                    <label>Data:</label>
-                    <input type="text" id="cfgData" class="input-modal" placeholder="dd/mm">
-                </div>
-                <div>
-                    <label>Dia:</label>
-                    <select id="cfgDia" class="input-modal">
-                        <option value="Segunda-Feira">Segunda-Feira</option>
-                        <option value="Terça-Feira">Terça-Feira</option>
-                        <option value="Quarta-Feira">Quarta-Feira</option>
-                        <option value="Quinta-Feira">Quinta-Feira</option>
-                        <option value="Sexta-Feira">Sexta-Feira</option>
-                        <option value="Sábado">Sábado</option>
-                        <option value="Domingo">Domingo</option>
-                    </select>
-                </div>
-            </div>
-            <div class="row-gap">
-                <div><label>Início:</label><input type="text" id="cfgInicio" class="input-modal"></div>
-                <div><label>Fim:</label><input type="text" id="cfgFim" class="input-modal"></div>
-            </div>
-            <div class="row-gap">
-                <div><label>Valor R$:</label><input type="text" id="cfgValor" class="input-modal"></div>
-                <div><label>Limite:</label><input type="number" id="cfgLimite" class="input-modal"></div>
-            </div>
-            <div class="campo-modal"><label>🔑 Chave Pix / Info Pagamento:</label><input type="text" id="cfgPix" class="input-modal"></div>
-            <div class="modal-buttons">
-                <button id="btnSalvarConfig" class="btn btn-main">SALVAR</button>
-                <button class="btn btn-sub" onclick="fecharModal('modalConfig')">CANCELAR</button>
-            </div>
+        </div>
+        <div class="row-gap">
+            <div><label>Início:</label><input type="text" id="cfgInicio" class="input-modal"></div>
+            <div><label>Fim:</label><input type="text" id="cfgFim" class="input-modal"></div>
+        </div>
+        <div class="row-gap">
+            <div><label>Valor R$:</label><input type="text" id="cfgValor" class="input-modal"></div>
+            <div><label>Limite:</label><input type="number" id="cfgLimite" class="input-modal"></div>
+        </div>
+        <div class="campo-modal"><label>🔑 Chave Pix / Info Pagamento:</label><input type="text" id="cfgPix" class="input-modal"></div>
+        <div class="modal-buttons">
+            <button id="btnSalvarConfig" class="btn btn-main">SALVAR</button>
+            <button class="btn btn-sub" onclick="fecharModal('modalConfig')">CANCELAR</button>
         </div>
     </div>
+</div>
 
-    <div id="modalImport" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
-            <h3>Colar Nomes</h3>
-            <textarea id="textoNomesBulk" placeholder="João&#10;Maria..."></textarea>
-            <div class="modal-buttons">
-                <button id="btnConfirmarImport" class="btn btn-main">ADICIONAR</button>
-                <button class="btn btn-sub" onclick="fecharModal('modalImport')">VOLTAR</button>
-            </div>
+<div id="modalImport" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <h3>Colar Nomes</h3>
+        <textarea id="textoNomesBulk" placeholder="João&#10;Maria..."></textarea>
+        <div class="modal-buttons">
+            <button id="btnConfirmarImport" class="btn btn-main">ADICIONAR</button>
+            <button class="btn btn-sub" onclick="fecharModal('modalImport')">VOLTAR</button>
         </div>
     </div>
+</div>
 
-    <script src="app.js"></script>
+<script src="load-navbar.js"></script>
+
+    <script type="module" src="app.js"></script>
 </body>
 </html>
