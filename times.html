@@ -9,13 +9,11 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <style>
-    /* Ajuste de espaçamento e respiro inferior */
     main.container { padding-top: 15px; padding-bottom: 40px; }
     .bottom-actions { padding-bottom: 0 !important; margin-bottom: 10px; }
 
     .qty-controls { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 10px; }
 
-    /* CONTROLADOR MINI PARA OS TIMES GERADOS */
     .qty-controls.mini { 
         padding: 2px 5px; 
         gap: 4px; 
@@ -35,7 +33,6 @@
         min-width: 12px; 
     }
 
-    /* Ajuste para o item-compra não ficar muito alto nos resultados */
     #areaTeams .item-compra {
         padding: 4px 10px;
     }
@@ -45,7 +42,38 @@
     
     .team-section { margin-bottom: 25px; }
     .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 5px; }
-    .team-title { font-size: 20px; font-weight: 800; border: none; background: transparent; outline: none; color: var(--text-dark); width: 60%; }
+    
+    /* --- ESTILO TÍTULO DO TIME --- */
+    .team-title { 
+        font-size: 22px; 
+        font-weight: 800; 
+        border: none; 
+        background: transparent; 
+        outline: none; 
+        width: 65%; 
+        padding: 2px 5px;
+        transition: all 0.2s ease;
+        border-bottom: 2px solid transparent;
+    }
+
+    /* ESTADO 1: Nome Padrão (Time 1, 2...) */
+    .team-title.is-default {
+        color: #b2bec3; /* Cinza claro */
+        border-bottom: 2px dotted #dfe6e9; /* Sublinhado pontilhado */
+    }
+
+    /* ESTADO 2: Nome Customizado */
+    .team-title.is-custom {
+        color: #2d3436; /* Cinza escuro/Preto */
+        border-bottom: 2px solid transparent; /* Sem sublinhado */
+    }
+
+    .team-title:focus {
+        color: var(--text-dark) !important;
+        background: rgba(0,0,0,0.03);
+        border-bottom: 2px solid var(--color-praia) !important;
+    }
+
     .team-total { font-size: 12px; background: var(--bg-app); padding: 4px 10px; border-radius: 10px; font-weight: bold; opacity: 0.8; }
     .team-list-drop { min-height: 50px; border-radius: 15px; }
     
@@ -61,11 +89,7 @@
     #btnGerarTimes { flex: 1.5; background: #00B4D8 !important; color: white !important; box-shadow: 0 4px 10px rgba(0, 180, 216, 0.3); }
     .label-instrucao { font-size: 10px; font-weight: bold; margin: 15px 0 10px 0; opacity: 0.6; text-transform: uppercase; }
 
-    /* ESTILO DO JOGADOR TRAVADO (is-locked) */
-    .theme-todes .item-compra.is-locked { background-color: #FFF0F6; border-color: rgba(255, 0, 128, 0.2); }
-    .theme-allstars .item-compra.is-locked { background-color: #F3E8FF; border-color: rgba(123, 44, 191, 0.2); }
-    .theme-elax .item-compra.is-locked { background-color: #F0EFFF; border-color: rgba(162, 155, 254, 0.2); }
-    .theme-praia .item-compra.is-locked { background-color: #E0F7FA; border-color: rgba(0, 180, 216, 0.2); }
+    .item-compra.is-locked { background-color: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; }
 
     .btn-lock {
         width: 28px; height: 28px;
@@ -74,17 +98,13 @@
         display: flex; align-items: center; justify-content: center;
         cursor: pointer;
         font-size: 12px;
-        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        background: rgba(0,0,0,0.08);
-        opacity: 0.2;
+        background: rgba(0,0,0,0.05);
+        color: #999;
     }
     .btn-lock.locked {
-        background: var(--color-allstars) !important;
-        opacity: 1 !important;
-        color: white;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        background: #22c55e !important;
+        color: white !important;
     }
-    .theme-todes .btn-lock.locked { background: var(--color-todes) !important; }
 
     .toast-copiado {
         position: fixed;
@@ -153,7 +173,6 @@
     </div>
 
     <script src="load-navbar.js"></script>
-
     <script type="module" src="times.js"></script>
 </body>
 </html>

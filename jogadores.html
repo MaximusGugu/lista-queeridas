@@ -38,6 +38,44 @@
 
         .btn-edit { background: #E0F2FE; color: #0284C7; border: none; font-size: 14px; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .action-buttons { display: flex; gap: 6px; }
+
+            /* CONTROLADOR MINI PARA A LISTA DO BANCO */
+    .qty-controls.mini { 
+        padding: 2px 5px; 
+        gap: 4px; 
+        border-radius: 6px; 
+        background: rgba(0,0,0,0.03);
+        margin-right: 5px;
+        display: flex;
+        align-items: center;
+    }
+    .qty-controls.mini .btn-qty { 
+        width: 22px; 
+        height: 22px; 
+        font-size: 14px; 
+        border-radius: 4px; 
+        background: rgba(0,0,0,0.1);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .qty-controls.mini .level-num { 
+        font-size: 13px; 
+        min-width: 14px; 
+        font-weight: 800;
+        text-align: center;
+        color: var(--secondary);
+    }
+
+    /* Garante que o nome não quebre e os botões fiquem alinhados */
+    .item-compra {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 15px;
+    }
     </style>
 </head>
 <body class="theme-allstars"> <!-- Usa o tema Roxo por padrão -->
@@ -90,34 +128,39 @@
 
     <!-- MODAL EDITAR JOGADOR -->
     <div id="modalEditarJogador" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
-            <h3>Editar Jogador</h3>
-            <div class="campo-modal">
-                <label>Nome Completo ou Apelido:</label>
-                <input type="text" id="editNome" class="input-modal" readonly style="opacity: 0.7; background: #eee;">
-            </div>
-            
-            <div class="campo-modal" style="margin-top: 15px;">
-                <label>Nível (1 a 10):</label>
-                <div class="row-between" style="align-items: center; gap: 15px;">
-                    <div class="qty-controls">
-                        <button class="btn-qty" onclick="ajustarEditarNivel(-1)">-</button>
-                        <span id="editNivel" class="level-num">3</span>
-                        <button class="btn-qty" onclick="ajustarEditarNivel(1)">+</button>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" id="editAllStars" style="width: 20px; height: 20px; cursor: pointer; margin: 0;">
-                        <label for="editAllStars" style="margin: 0; font-size: 11px; font-weight: bold; color: var(--text-muted); cursor: pointer; text-transform: uppercase;">ALL STARS ⭐</label>
-                    </div>
+    <div class="modal-content">
+        <h3>Editar Jogador</h3>
+        <div class="campo-modal">
+            <label>Nome do Jogador (Chave):</label>
+            <input type="text" id="editNome" class="input-modal">
+        </div>
+
+        <div class="campo-modal" style="margin-top: 15px;">
+            <label>Apelidos / Como ele escreve (separe por vírgula):</label>
+            <input type="text" id="editApelidos" class="input-modal" placeholder="Ex: Leo, Leozinho, Garcez">
+        </div>
+        
+        <div class="campo-modal" style="margin-top: 15px;">
+            <label>Nível (1 a 10) e Categoria:</label>
+            <div class="row-between" style="align-items: center; gap: 15px;">
+                <div class="qty-controls">
+                    <button class="btn-qty" onclick="window.ajustarEditarNivel(-1)">-</button>
+                    <span id="editNivel" class="level-num">3</span>
+                    <button class="btn-qty" onclick="window.ajustarEditarNivel(1)">+</button>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="editAllStars" style="width: 20px; height: 20px; cursor: pointer; margin: 0;">
+                    <label for="editAllStars" style="margin: 0; font-size: 11px; font-weight: bold; color: var(--text-muted); cursor: pointer; text-transform: uppercase;">ALL STARS ⭐</label>
                 </div>
             </div>
-            
-            <div class="modal-buttons" style="margin-top: 20px;">
-                <button class="btn btn-main" onclick="salvarEdicaoJogador()" style="background: var(--color-praia);">SALVAR ALTERAÇÕES</button>
-                <button class="btn btn-sub" onclick="fecharModalEditar()">CANCELAR</button>
-            </div>
+        </div>
+        
+        <div class="modal-buttons" style="margin-top: 20px;">
+            <button class="btn btn-main" onclick="window.salvarEdicaoJogador()" style="background: var(--color-praia);">SALVAR ALTERAÇÕES</button>
+            <button class="btn btn-sub" onclick="window.fecharModalEditar()">CANCELAR</button>
         </div>
     </div>
+</div>
 
     <script type="module" src="jogadores.js"></script>
 
