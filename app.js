@@ -7,7 +7,6 @@ const presets = {
     "PRAIA_DOMINGO": { nomeJogo: "😎☀️ JOGO DE AREIA☀️😎", quadra: "Praia Central de BC – Altura da 3700", dia: "Domingo", inicio: "16h", fim: "18h", limite: 15, pix: "💸 Jogo FREE!", valor: "0,00", adm: "Caio Padovan" }
 };
 
-// Estrutura do banco de dados v3 com Praia e Elax como listas de campos vazios
 let db = JSON.parse(localStorage.getItem("volei_todes_db_v3")) || {
     ativa: "TODES_QUARTA",
     listas: {
@@ -20,7 +19,10 @@ let db = JSON.parse(localStorage.getItem("volei_todes_db_v3")) || {
     }
 };
 
-const listaDOM = document.getElementById("listaJogadores");
+function formatarNome(nome) {
+    if (!nome) return "";
+    return nome.toLowerCase().split(' ').map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1)).join(' ');
+}
 
 function calcularProximaData(diaSemana) {
     const mapaDias = { "Domingo": 0, "Segunda-Feira": 1, "Terça-Feira": 2, "Quarta-Feira": 3, "Quinta-Feira": 4, "Sexta-Feira": 5, "Sábado": 6 };
@@ -31,6 +33,18 @@ function calcularProximaData(diaSemana) {
     return `${String(dataResultado.getDate()).padStart(2, '0')}/${String(dataResultado.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// --- FUNÇÃO TOAST FLUTUANTE ---
+function mostrarToast(x, y) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-copiado';
+    toast.innerText = 'Copiado!';
+    toast.style.left = `${x}px`;
+    toast.style.top = `${y}px`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1000);
+}
+
+const listaDOM = document.getElementById("listaJogadores");
 if (listaDOM) {
     new Sortable(listaDOM, { animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost', onEnd: () => reordenarItens() });
 }
@@ -61,12 +75,15 @@ function render() {
 
     const isFree = pix.includes("FREE");
     document.getElementById("infoPreview").innerHTML = `
-        <div class="edit-text title" contenteditable="true" data-key="nomeJogo">${nomeJogo}</div>
+        <div class="info-card-header">
+            <div class="edit-text title" contenteditable="true" data-key="nomeJogo">${nomeJogo}</div>
+            <button id="btnCopyWhatsapp" class="copy-btn">COPIAR LISTA</button>
+        </div>
         <div class="info-row">
             📍 <span class="edit-text" contenteditable="true" data-key="quadra">${quadra}</span>
             <span class="sep">|</span>
             <span class="edit-text" contenteditable="true" data-key="data">${data}</span>
-            <span class="sep">(</span><span class="edit-text" contenteditable="true" data-key="dia">${dia}</span><span class="sep">)</span>
+            <span class="sep">(</span><span class="edit-day-trigger" data-key="dia">${dia}</span><span class="sep">)</span>
         </div>
         <div class="info-row">
             🕒 <span class="edit-text" contenteditable="true" data-key="inicio">${inicio}</span> às <span class="edit-text" contenteditable="true" data-key="fim">${fim}</span>
@@ -78,8 +95,50 @@ function render() {
         </div>
     `;
 
+    const diaTrigger = document.querySelector('.edit-day-trigger');
+    diaTrigger.onclick = () => {
+        const currentDia = diaTrigger.innerText;
+        const select = document.createElement('select');
+        select.className = 'edit-resumo-select';
+        const dias = ["Segunda-Feira", "Terça-Feira", "Quarta-Feira", "Quinta-Feira", "Sexta-Feira", "Sábado", "Domingo"];
+        dias.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d; opt.text = d;
+            if(d === currentDia) opt.selected = true;
+            select.appendChild(opt);
+        });
+        diaTrigger.replaceWith(select);
+        select.focus();
+        select.onchange = () => {
+            listaAtual.config.dia = select.value;
+            listaAtual.config.data = calcularProximaData(select.value);
+            salvar(); render();
+        };
+        select.onblur = () => render();
+    };
+
+    // Botão Copiar com Toast na posição do clique
+    document.getElementById("btnCopyWhatsapp").onclick = (e) => {
+        const c = listaAtual.config;
+        const isFreeCopy = c.pix.includes("FREE");
+        let texto = `*${c.nomeJogo}*\n📍 ${c.quadra.toUpperCase()} | ${c.data} (${c.dia}) | ${c.inicio} às ${c.fim}\n💰 ${isFreeCopy ? '' : 'R$' + c.valor} (${c.limite} pessoas) | ${isFreeCopy ? c.pix : 'Pix: ' + c.pix}\n\n1 - ${formatarNome(c.adm)} ✅\n`;
+        listaAtual.jogadores.forEach((j, i) => {
+            const pos = i + 2;
+            if (pos === c.limite + 1) texto += `\n*Lista de Espera ⏰*\n`;
+            texto += `${pos} - ${formatarNome(j.nome)}\n`;
+        });
+        
+        navigator.clipboard.writeText(texto).then(() => {
+            mostrarToast(e.clientX, e.clientY);
+        });
+    };
+
     document.querySelectorAll('.edit-text').forEach(el => {
-        el.onblur = () => { listaAtual.config[el.getAttribute('data-key')] = el.innerText.trim(); salvar(); if(['nomeJogo','limite'].includes(el.getAttribute('data-key'))) render(); };
+        el.onblur = () => {
+            listaAtual.config[el.getAttribute('data-key')] = el.innerText.trim();
+            salvar();
+            if(['nomeJogo','limite'].includes(el.getAttribute('data-key'))) render();
+        };
         el.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } };
     });
 
@@ -89,30 +148,33 @@ function render() {
     divAdm.innerHTML = `
         <div class="drag-handle" style="opacity:0">⠿</div>
         <span class="num">1</span>
-        <span class="input-item" contenteditable="true" style="color:var(--secondary); font-weight:bold;">${adm} ✅</span>
+        <span class="input-item" contenteditable="true" style="color:var(--secondary); font-weight:bold;">${formatarNome(adm)}</span>
         <button class="btn-del" style="opacity:0">×</button>
     `;
-    divAdm.querySelector('.input-item').onblur = (e) => { listaAtual.config.adm = e.target.innerText.replace(' ✅', '').trim(); salvar(); render(); };
+    divAdm.querySelector('.input-item').onblur = (e) => {
+        listaAtual.config.adm = formatarNome(e.target.innerText.trim());
+        salvar(); render();
+    };
     listaDOM.appendChild(divAdm);
 
     listaAtual.jogadores.forEach((jog, index) => {
         const pos = index + 2;
+        const div = document.createElement("div");
+        div.className = `item-compra ${pos > limite ? 'modo-espera' : ''}`;
+        div.setAttribute('data-id', jog.id);
         if (pos === limite + 1) {
             const separator = document.createElement("div");
             separator.className = "espera-divider";
             separator.innerText = "Lista de Espera ⏰";
             listaDOM.appendChild(separator);
         }
-        const div = document.createElement("div");
-        div.className = `item-compra ${pos > limite ? 'modo-espera' : ''}`;
-        div.setAttribute('data-id', jog.id);
         div.innerHTML = `
             <div class="drag-handle">⠿</div>
             <span class="num">${pos}</span>
-            <span class="input-item" contenteditable="true">${jog.nome}</span>
+            <span class="input-item" contenteditable="true">${formatarNome(jog.nome)}</span>
             <button class="btn-del">×</button>
         `;
-        div.querySelector(".input-item").onblur = (e) => { jog.nome = e.target.innerText.trim(); salvar(); };
+        div.querySelector(".input-item").onblur = (e) => { jog.nome = formatarNome(e.target.innerText.trim()); salvar(); render(); };
         div.querySelector(".btn-del").onclick = () => { listaAtual.jogadores = listaAtual.jogadores.filter(j => j.id !== jog.id); salvar(); render(); };
         listaDOM.appendChild(div);
     });
@@ -150,43 +212,25 @@ document.getElementById("btnSalvarConfig").onclick = () => {
         valor: document.getElementById("cfgValor").value,
         limite: parseInt(document.getElementById("cfgLimite").value),
         pix: document.getElementById("cfgPix").value,
-        adm: document.getElementById("cfgAdm").value
+        adm: formatarNome(document.getElementById("cfgAdm").value)
     };
     salvar(); render(); fecharModal('modalConfig');
 };
 
-document.getElementById("btnOpenImport").onclick = () => abrirModal('modalImport');
 document.getElementById("btnConfirmarImport").onclick = () => {
     const texto = document.getElementById("textoNomesBulk").value.trim();
     if (texto) {
-        getAtiva().jogadores = texto.split('\n').map(n => n.trim()).filter(n => n).map(n => ({ id: Date.now() + Math.random(), nome: n }));
+        getAtiva().jogadores = texto.split('\n').map(n => n.trim()).filter(n => n).map(n => ({ id: Date.now() + Math.random(), nome: formatarNome(n) }));
         salvar(); render();
     }
     fecharModal('modalImport'); document.getElementById("textoNomesBulk").value = "";
 };
 
-document.getElementById("btnCopyWhatsapp").onclick = () => {
-    const listaAtual = getAtiva();
-    const c = listaAtual.config;
-    const isFree = c.pix.includes("FREE");
-    let texto = `*${c.nomeJogo}*\n📍 ${c.quadra.toUpperCase()} | ${c.data} (${c.dia}) | ${c.inicio} às ${c.fim}\n💰 ${isFree ? '' : 'R$' + c.valor} (${c.limite} pessoas) | ${isFree ? c.pix : 'Pix: ' + c.pix}\n\n1 - ${c.adm} ✅\n`;
-    listaAtual.jogadores.forEach((j, i) => {
-        const pos = i + 2;
-        if (pos === c.limite + 1) texto += `\n*Lista de Espera ⏰*\n`;
-        texto += `${pos} - ${j.nome ? j.nome : ""}\n`;
-    });
-    navigator.clipboard.writeText(texto).then(() => alert("Copiado com sucesso!"));
-};
+document.getElementById("btnOpenImport").onclick = () => abrirModal('modalImport');
 
 document.getElementById("btnClearAll").onclick = () => { 
     if(confirm("Limpar lista atual?")) { 
-        if(db.ativa === "ELAX_QUINTA") {
-            getAtiva().jogadores = Array.from({ length: 17 }, (_, i) => ({ id: Date.now() + i, nome: "" }));
-        } else if(db.ativa === "PRAIA_DOMINGO") {
-            getAtiva().jogadores = Array.from({ length: 14 }, (_, i) => ({ id: Date.now() + i, nome: "" }));
-        } else {
-            getAtiva().jogadores = []; 
-        }
+        getAtiva().jogadores = (db.ativa === "ELAX_QUINTA" || db.ativa === "PRAIA_DOMINGO") ? Array.from({ length: db.ativa === "ELAX_QUINTA" ? 17 : 14 }, (_, i) => ({ id: Date.now() + i, nome: "" })) : [];
         salvar(); render(); 
     } 
 };
