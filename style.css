@@ -80,8 +80,14 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .edit-resumo-select { font-family: inherit; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
 
 .copy-btn { background: #25D366; color: white; border: none; padding: 10px 18px; font-size: 11px; font-weight: 800; border-radius: 12px; cursor: pointer; white-space: nowrap; transition: all 0.3s ease; }
+.copy-link-btn { padding: 6px 10px; cursor: pointer; border-radius: 8px; border: 1px solid #ddd; background: white; color: var(--text-dark); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.copy-link-btn:hover { background: #f8fafc; }
 .info-row { font-size: 13px; color: var(--text-muted); word-wrap: break-word; }
 .sep { opacity: 0.4; padding: 0 4px; }
+.form-status-control { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+.status-toggle-btn { border: none; border-radius: 999px; padding: 7px 12px; color: white; font-size: 10px; font-weight: 900; cursor: pointer; white-space: nowrap; }
+.status-toggle-btn.is-open { background: #e11d48; }
+.status-toggle-btn.is-closed { background: #059669; }
 
 /* --- LISTA JOGADORES --- */
 .item-compra { 
@@ -99,7 +105,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
     min-height: 48px;
 }
 
-/* NOVO: BG VERDE PARA PAGOS (igual ao is-locked dos times) */
 .item-compra.is-pago {
     background-color: #f0fdf4 !important; 
     border: 1px solid #bbf7d0 !important;
@@ -157,28 +162,47 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 
 .modo-espera { background-color: transparent; border: 1px dashed #D1D8E0; opacity: 0.7; }
 
-/* --- LOADING SPINNER --- */
-.spinner-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 0;
-    gap: 10px;
+/* --- MODAIS --- */
+.modal-overlay { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; 
+    z-index: 2000; padding: 10px; backdrop-filter: blur(4px); 
 }
 
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-left-color: var(--color-allstars);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.modal-content { 
+    background: white; padding: 25px; border-radius: 20px; 
+    width: 100%; max-width: 450px; max-height: calc(100dvh - 20px); 
+    overflow-y: auto; overflow-x: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    position: relative;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.modal-content h3 { margin-top: 0; margin-bottom: 14px; color: var(--text-dark); font-weight: 800; font-size: 18px; }
+
+.campo-modal { margin-bottom: 15px; width: 100%; }
+.campo-modal label { 
+    display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); 
+    margin-bottom: 5px; text-transform: uppercase; 
+}
+
+.input-modal { 
+    border: 2px solid var(--bg-app); padding: 12px; border-radius: 10px; 
+    width: 100%; font-family: inherit; font-size: 14px; color: var(--text-dark);
+}
+
+.input-modal:focus { border-color: var(--color-praia); outline: none; background: #f0f9ff; }
+
+/* --- ESTILOS PADRONIZADOS PARA O MODAL DE IMPORTAR (COLAR LISTA) --- */
+.modal-import-content { max-width: 620px; }
+
+.import-textarea {
+    display: block; width: 100%; min-height: 150px; padding: 12px;
+    border: 2px solid var(--bg-app); border-radius: 10px;
+    font-family: inherit; font-size: 14px; resize: vertical; margin-bottom: 15px;
+}
+.import-textarea:focus { border-color: var(--color-praia); outline: none; background: #f0f9ff; }
+
+.modal-buttons { 
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; 
 }
 
 /* --- TOAST FLUTUANTE (ANIMAÇÃO) --- */
@@ -204,6 +228,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
     100% { opacity: 0; transform: translate(-50%, -150%); }
 }
 
+/* --- BOTÕES --- */
 .bottom-actions { padding-bottom: 40px; display: flex; flex-direction: column; gap: 8px; }
 .btn { font-family: inherit; font-weight: 700; cursor: pointer; border-radius: 12px; border: none; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
 .btn-main { color: white; padding: 16px; font-size: 12px; width: 100%; transition: background 0.4s; }
@@ -212,19 +237,34 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .theme-elax .btn-main { background: var(--color-elax); }
 .theme-praia .btn-main { background: var(--color-praia); }
 
-.btn-sub { background: white; border: 2px solid var(--accent) !important; color: var(--accent); padding: 12px; font-size: 11px; width: 100%; }
+.btn-sub { background: white; border: 2px solid #ddd !important; color: var(--text-muted); padding: 12px; font-size: 11px; width: 100%; }
 .btn-sub.danger { border-color: #FDA7A7 !important; color: var(--danger); }
 
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; padding: 15px; backdrop-filter: blur(4px); }
-.modal-content { background: white; padding: 20px; border-radius: 20px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
-.input-modal { border: 2px solid var(--bg-app); padding: 10px; border-radius: 10px; width: 100%; font-family: inherit; margin-bottom: 5px; font-size: 14px; }
-textarea { width: 100%; height: 120px; border-radius: 12px; padding: 10px; border: 2px solid var(--bg-app); margin: 10px 0; font-family: inherit; }
-.campo-modal label { display: block; font-size: 10px; font-weight: 700; margin-bottom: 3px; color: var(--text-muted); text-transform: uppercase; }
-.modal-buttons { display: flex; flex-direction: column; gap: 8px; margin-top: 15px; }
+/* --- SPINNER E LOADING --- */
+.spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+    gap: 10px;
+}
 
-.sortable-ghost { opacity: 0.2; border: 2px dashed var(--color-todes); }
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    border-left-color: var(--color-allstars);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
 
-/* --- CHECKBOX DE PAGAMENTO ESTILO REFERÊNCIA --- */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* --- CHECKBOX DE PAGAMENTO --- */
 .check-pago {
     appearance: none;
     -webkit-appearance: none;
@@ -306,3 +346,5 @@ textarea { width: 100%; height: 120px; border-radius: 12px; padding: 10px; borde
 .theme-praia .nav-link.active { color: var(--color-praia); }
 
 main.container { padding-bottom: 100px !important; }
+
+.sortable-ghost { opacity: 0.2; border: 2px dashed var(--color-todes); }

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscrição - Queeridas Volleyball</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background-color: #f1f5f9; padding: 15px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .form-container { width: 100%; max-width: 550px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
+        .banner { width: 100%; height: auto; display: block; border-bottom: 8px solid var(--color-allstars); }
+        .header-info { padding: 30px 25px 20px 25px; }
+        .header-info h1 { font-size: 24px; color: #1e293b; margin-bottom: 20px; font-weight: 700; line-height: 1.2; }
+        .grid-info { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 18px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #edf2f7; margin-bottom: 25px; align-items: start; }
+        .info-item { min-width: 0; font-size: 13px; color: #475569; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .info-label { display: flex; align-items: flex-start; gap: 8px; font-weight: 500; min-width: 0; }
+        .info-label span { min-width: 0; overflow-wrap: anywhere; }
+        .maps-link { font-size: 11px; color: var(--color-praia); text-decoration: underline; margin-left: 22px; font-weight: bold; }
+        .payment-info { line-height: 1.35; }
+        .form-body { padding: 0 25px 30px 25px; }
+        .campo { margin-bottom: 20px; }
+        .campo label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px; text-transform: uppercase; }
+        .input-text { width: 100%; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 15px; transition: all 0.2s; }
+        .input-text:focus { border-color: var(--color-praia); outline: none; background: #f0f9ff; }
+        .btn-enviar { width: 100%; padding: 16px; background: var(--color-praia); color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 16px; cursor: pointer; transition: transform 0.2s; }
+        .btn-enviar:active { transform: scale(0.98); }
+        .btn-enviar:disabled { background: #cbd5e1; cursor: not-allowed; }
+        .footer-text { margin-top: 25px; font-size: 13px; color: #64748b; line-height: 1.6; white-space: pre-wrap; }
+        #sucesso { display: none; padding: 60px 25px; text-align: center; }
+        .status-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px; }
+        .tag-aberto { background: #dcfce7; color: #166534; }
+        .tag-fechado { background: #fee2e2; color: #991b1b; }
+        .closed-message { display: none; margin: 0 25px 26px 25px; padding: 16px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; color: #9a3412; font-size: 14px; line-height: 1.55; }
+        .closed-message a { color: #0369a1; font-weight: 800; text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <img src="https://i.imgur.com/8QO9NeE.png" alt="Banner Queeridas" class="banner" id="imgBanner">
+        
+        <div id="corpoForm">
+            <div class="header-info">
+                <div id="tagStatus" class="status-tag">CARREGANDO...</div>
+                <h1 id="txtTitulo">...</h1>
+                
+                <div class="grid-info">
+                    <div class="info-item">
+                        <div class="info-label">📅 <span id="txtData">...</span></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">🕒 <span id="txtHora">...</span></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">📍 <span id="txtLocal">...</span></div>
+                        <!-- LINK DO MAPA APARECE AQUI SE EXISTIR -->
+                        <a id="lnkMapa" href="#" target="_blank" class="maps-link" style="display:none;">(Como chegar?)</a>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label payment-info">💰 <span id="txtValor">...</span></div>
+                    </div>
+                </div>
+
+                <div class="footer-text" id="txtDescricao">...</div>
+            </div>
+
+            <div id="msgListaFechada" class="closed-message"></div>
+
+            <div class="form-body" id="formBody">
+                <form id="formInscricao">
+                    <div class="campo">
+                        <label>Nome Completo:</label>
+                        <input type="text" id="iptNome" class="input-text" placeholder="Como você está no WhatsApp" required>
+                    </div>
+                    <div class="campo">
+                        <label>E-mail:</label>
+                        <input type="email" id="iptEmail" class="input-text" placeholder="Para controle da lista" required>
+                    </div>
+                    <button type="submit" id="btnSubmit" class="btn-enviar">ENVIAR MINHA INSCRIÇÃO</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="sucesso">
+            <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
+            <h2 style="color: #0f172a; margin-bottom: 10px;">Inscrição Confirmada!</h2>
+            <p style="color: #64748b;">Agradecemos sua inscrição 💖 <br> Aguarde pelo lançamento da lista no grupo.</p>
+            <button onclick="location.reload()" style="margin-top: 30px; background: none; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 8px; cursor: pointer;">Fazer outra inscrição</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, doc, onSnapshot, setDoc, getDoc } from "./firebase-config.js";
+
+        const params = new URLSearchParams(window.location.search);
+        const idLista = params.get('lista') || 'TODES_QUARTA';
+        const docRef = doc(db, "sistema", "lista_presenca");
+        const LINK_GRUPO_PADRAO = "https://chat.whatsapp.com/JWHNWnWC8N5IFrpNEwEtii";
+        const DIAS_ANTES_ABERTURA_PADRAO = 1;
+        const HORARIO_ABERTURA_PADRAO = "12h30";
+
+        onSnapshot(docRef, (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                const lista = data.listas[idLista];
+                if (lista) renderForm(lista.config);
+            }
+        });
+
+        function renderForm(cfg) {
+            document.getElementById('txtTitulo').innerText = cfg.nomeJogo;
+            document.getElementById('txtData').innerText = `${cfg.data} (${cfg.dia})`;
+            document.getElementById('txtHora').innerText = `${cfg.inicio} às ${cfg.fim}`;
+            document.getElementById('txtLocal').innerText = cfg.quadra;
+            const isFree = (cfg.pix || "").includes("FREE");
+            document.getElementById('txtValor').innerText = isFree ? cfg.pix : `R$ ${cfg.valor}`;
+            document.getElementById('txtDescricao').innerText = cfg.textoApoio || "";
+            
+            // LOGICA DO LINK DO MAPA
+            const lnkMapa = document.getElementById('lnkMapa');
+            if (cfg.mapaLink && cfg.mapaLink.trim() !== "") {
+                lnkMapa.href = cfg.mapaLink;
+                lnkMapa.style.display = "block";
+            } else {
+                lnkMapa.style.display = "none";
+            }
+
+            // --- LÓGICA DAS IMAGENS ---
+            const imgBanner = document.getElementById('imgBanner');
+            const banners = {
+                'TODES_QUARTA': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
+                'TODES_SEXTA': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
+                'ALLSTARS_QUARTA': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
+                'ALLSTARS_SABADO': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
+                'ELAX_QUINTA': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
+                'PRAIA_DOMINGO': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png'
+            };
+            imgBanner.src = banners[idLista] || 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png';
+
+            const tag = document.getElementById('tagStatus');
+            const btn = document.getElementById('btnSubmit');
+            const formBody = document.getElementById('formBody');
+            const msgListaFechada = document.getElementById('msgListaFechada');
+
+            if (cfg.formAberto) {
+                tag.innerText = "● INSCRIÇÕES ABERTAS";
+                tag.className = "status-tag tag-aberto";
+                btn.disabled = false;
+                btn.innerText = "ENVIAR";
+                formBody.style.display = "block";
+                msgListaFechada.style.display = "none";
+            } else {
+                tag.innerText = "● INSCRIÇÕES FECHADAS";
+                tag.className = "status-tag tag-fechado";
+                btn.disabled = true;
+                btn.innerText = "ESTA LISTA ESTÁ FECHADA";
+                formBody.style.display = "none";
+                msgListaFechada.style.display = "block";
+                msgListaFechada.innerHTML = montarMensagemListaFechada(cfg);
+            }
+        }
+
+        function montarMensagemListaFechada(cfg) {
+            const abertura = calcularAberturaLista(cfg);
+            const grupoLink = cfg.grupoLink || LINK_GRUPO_PADRAO;
+            return `Esta lista fechou. A próxima lista abre no dia <strong>${abertura.data}</strong> (${abertura.diaSemana}) às <strong>${abertura.horario}</strong>! Fique atento no grupo do WhatsApp. Caso ainda não faça parte, <a href="${grupoLink}" target="_blank" rel="noopener noreferrer">clique aqui</a> e participe.`;
+        }
+
+        function calcularAberturaLista(cfg) {
+            const diasAntes = Number.isFinite(Number(cfg.abreDiasAntes)) ? Number(cfg.abreDiasAntes) : DIAS_ANTES_ABERTURA_PADRAO;
+            const horario = cfg.abreHorario || HORARIO_ABERTURA_PADRAO;
+            const dataEvento = obterDataEvento(cfg);
+            let dataAbertura = new Date(dataEvento);
+            dataAbertura.setDate(dataAbertura.getDate() - diasAntes);
+
+            const agora = new Date();
+            let tentativas = 0;
+            while (combinarDataEHorario(dataAbertura, horario) <= agora && tentativas < 10) {
+                dataAbertura.setDate(dataAbertura.getDate() + 7);
+                tentativas++;
+            }
+
+            return {
+                data: formatarDataCurta(dataAbertura),
+                diaSemana: formatarDiaSemana(dataAbertura),
+                horario
+            };
+        }
+
+        function obterDataEvento(cfg) {
+            const partes = /^(\d{2})\/(\d{2})$/.exec((cfg.data || "").trim());
+            if (partes) {
+                const data = new Date(new Date().getFullYear(), Number(partes[2]) - 1, Number(partes[1]));
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                if (data >= hoje) return data;
+            }
+
+            const mapaDias = { "Domingo": 0, "Segunda-Feira": 1, "Terça-Feira": 2, "Quarta-Feira": 3, "Quinta-Feira": 4, "Sexta-Feira": 5, "Sábado": 6 };
+            const hoje = new Date();
+            const alvo = mapaDias[cfg.dia] ?? hoje.getDay();
+            const diferenca = (alvo - hoje.getDay() + 7) % 7;
+            const data = new Date(hoje);
+            data.setDate(hoje.getDate() + diferenca);
+            return data;
+        }
+
+        function combinarDataEHorario(data, horario) {
+            const resultado = new Date(data);
+            const partes = /^(\d{1,2})(?:h|:)?(\d{2})?$/.exec((horario || "").trim());
+            resultado.setHours(Number(partes?.[1] || 0), Number(partes?.[2] || 0), 0, 0);
+            return resultado;
+        }
+
+        function formatarDataCurta(data) {
+            return `${String(data.getDate()).padStart(2, '0')}/${String(data.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function formatarDiaSemana(data) {
+            return data.toLocaleDateString('pt-BR', { weekday: 'long' });
+        }
+
+        document.getElementById('formInscricao').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmit');
+            btn.disabled = true;
+            btn.innerText = "PROCESSANDO...";
+
+            try {
+                const snap = await getDoc(docRef);
+                const listas = snap.data().listas;
+                if (!listas[idLista]?.config?.formAberto) {
+                    renderForm(listas[idLista].config);
+                    return;
+                }
+                
+                const novoJogador = {
+                    id: "p-" + Date.now(),
+                    nome: document.getElementById('iptNome').value.trim(),
+                    email: document.getElementById('iptEmail').value.trim(),
+                    timestamp: new Date().toISOString(),
+                    pago: false
+                };
+
+                listas[idLista].jogadores.push(novoJogador);
+                await setDoc(docRef, { listas });
+
+                document.getElementById('corpoForm').style.display = 'none';
+                document.getElementById('sucesso').style.display = 'block';
+            } catch (err) {
+                alert("Erro ao salvar. Tente novamente.");
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>

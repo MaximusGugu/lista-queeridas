@@ -38,12 +38,15 @@
         </div>
     </main>
 
+    <!-- MODAL DE CONFIGURAÇÃO DO EVENTO -->
     <div id="modalConfig" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
-            <h3>Configurar Evento</h3>
+        <div class="modal-content modal-config-content">
+            <h3>⚙️ Configurar Evento</h3>
+
+            <!-- 1. SELETOR DE MODALIDADE NO TOPO PARA EVITAR CONFLITOS -->
             <div class="campo-modal">
-                <label>Modalidade:</label>
-                <select id="cfgModalidade" class="input-modal">
+                <label>Selecione a Lista que deseja editar:</label>
+                <select id="cfgModalidade" class="input-modal modal-primary-select">
                     <option value="TODES_QUARTA">TODES (Quarta-feira)</option>
                     <option value="TODES_SEXTA">TODES (Sexta-feira)</option>
                     <option value="ALLSTARS_QUARTA">ALL STARS (Quarta-feira)</option>
@@ -52,15 +55,65 @@
                     <option value="PRAIA_DOMINGO">PRAIA (Domingo)</option>
                 </select>
             </div>
-            <div class="campo-modal">
-                <label>ADM do Dia:</label>
-                <input type="text" id="cfgAdm" class="input-modal">
+            
+            <!-- CONTROLE DO FORMULÁRIO PÚBLICO -->
+            <div class="campo-modal config-panel">
+                <label>Status do Formulário Público:</label>
+                <select id="cfgFormStatus" class="input-modal">
+                    <option value="true">🔓 ABERTO (Permitir Inscrições)</option>
+                    <option value="false">🔒 FECHADO (Bloquear Link)</option>
+                </select>
+                
+                <label>Texto de Apoio (Aparece no formulário):</label>
+                <textarea id="cfgTextoApoio" class="input-modal" placeholder="Descreva as regras ou informações do grupo..."></textarea>
+
+                <div class="modal-grid config-panel-grid">
+                    <div class="campo-modal">
+                        <label>Dias antes que a lista abre:</label>
+                        <input type="number" id="cfgAbreDiasAntes" class="input-modal" min="0" step="1">
+                    </div>
+                    <div class="campo-modal">
+                        <label>Horário que a lista abre:</label>
+                        <input type="text" id="cfgAbreHorario" class="input-modal" placeholder="12h30">
+                    </div>
+                </div>
+
+                <label>Link do Grupo do WhatsApp:</label>
+                <input type="text" id="cfgGrupoLink" class="input-modal" placeholder="Cole o link do grupo aqui">
             </div>
-            <div class="campo-modal"><label>Nome do Jogo:</label><input type="text" id="cfgNomeJogo" class="input-modal"></div>
-            <div class="campo-modal"><label>📍 Local/Quadra:</label><input type="text" id="cfgQuadra" class="input-modal"></div>
+
+            <div class="modal-grid">
+                <div class="campo-modal">
+                    <label>ADM do Dia:</label>
+                    <input type="text" id="cfgAdm" class="input-modal">
+                </div>
+
+                <div class="campo-modal">
+                    <label>Nome do Jogo:</label>
+                    <input type="text" id="cfgNomeJogo" class="input-modal">
+                </div>
+            </div>
+            
+            <div class="modal-grid">
+                <div class="campo-modal">
+                    <label>📍 Local/Quadra:</label>
+                    <input type="text" id="cfgQuadra" class="input-modal">
+                </div>
+
+                <!-- NOVO CAMPO: LINK DO GOOGLE MAPS -->
+                <div class="campo-modal">
+                    <label>🔗 Link Google Maps (Local):</label>
+                    <input type="text" id="cfgMapaLink" class="input-modal" placeholder="Cole a URL do Maps aqui">
+                </div>
+            </div>
+
             <div class="row-gap">
-                <div><label>Data:</label><input type="text" id="cfgData" class="input-modal" placeholder="dd/mm"></div>
-                <div><label>Dia:</label>
+                <div class="campo-modal">
+                    <label>Data:</label>
+                    <input type="text" id="cfgData" class="input-modal" placeholder="dd/mm">
+                </div>
+                <div class="campo-modal">
+                    <label>Dia:</label>
                     <select id="cfgDia" class="input-modal">
                         <option value="Segunda-Feira">Segunda-Feira</option>
                         <option value="Terça-Feira">Terça-Feira</option>
@@ -72,32 +125,68 @@
                     </select>
                 </div>
             </div>
+
             <div class="row-gap">
-                <div><label>Início:</label><input type="text" id="cfgInicio" class="input-modal"></div>
-                <div><label>Fim:</label><input type="text" id="cfgFim" class="input-modal"></div>
+                <div class="campo-modal">
+                    <label>Início:</label>
+                    <input type="text" id="cfgInicio" class="input-modal">
+                </div>
+                <div class="campo-modal">
+                    <label>Fim:</label>
+                    <input type="text" id="cfgFim" class="input-modal">
+                </div>
             </div>
+
             <div class="row-gap">
-                <div><label>Valor R$:</label><input type="text" id="cfgValor" class="input-modal"></div>
-                <div><label>Limite:</label><input type="number" id="cfgLimite" class="input-modal"></div>
+                <div class="campo-modal">
+                    <label>Valor R$:</label>
+                    <input type="text" id="cfgValor" class="input-modal">
+                </div>
+                <div class="campo-modal">
+                    <label>Limite:</label>
+                    <input type="number" id="cfgLimite" class="input-modal">
+                </div>
             </div>
-            <div class="campo-modal"><label>🔑 Chave Pix / Info Pagamento:</label><input type="text" id="cfgPix" class="input-modal"></div>
+
+            <div class="campo-modal">
+                <label>🔑 Chave Pix / Info Pagamento:</label>
+                <input type="text" id="cfgPix" class="input-modal">
+            </div>
+            
             <div class="modal-buttons">
-                <button id="btnSalvarConfig" class="btn btn-main">SALVAR</button>
+                <button id="btnSalvarConfig" class="btn btn-main">SALVAR ALTERAÇÕES</button>
                 <button class="btn btn-sub" onclick="fecharModal('modalConfig')">CANCELAR</button>
             </div>
         </div>
     </div>
 
+    <!-- MODAL DE IMPORTAÇÃO MANUAL (COLAR LISTA) -->
     <div id="modalImport" class="modal-overlay" style="display:none;">
-        <div class="modal-content">
-            <h3>Colar Nomes</h3>
-            <textarea id="textoNomesBulk" placeholder="João&#10;Maria..."></textarea>
-            <div class="modal-buttons">
-                <button id="btnConfirmarImport" class="btn btn-main">ADICIONAR</button>
-                <button class="btn btn-sub" onclick="fecharModal('modalImport')">VOLTAR</button>
-            </div>
+    <div class="modal-content modal-import-content">
+        <h3>Importar Lista</h3>
+        <textarea id="textoNomesBulk" class="import-textarea" placeholder="João&#10;Maria..."></textarea>
+        <div class="modal-buttons">
+            <button id="btnConfirmarImport" class="btn btn-main">ADICIONAR</button>
+            <button class="btn btn-sub" onclick="fecharModal('modalImport')">VOLTAR</button>
         </div>
     </div>
+</div>
+
+    <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-link active">
+            <span class="nav-icon">📝</span>
+            <span class="nav-label">Presença</span>
+        </a>
+        <a href="times.html" class="nav-link">
+            <span class="nav-icon">⚖️</span>
+            <span class="nav-label">Times</span>
+        </a>
+        <a href="jogadores.html" class="nav-link">
+            <span class="nav-icon">👥</span>
+            <span class="nav-label">Banco</span>
+        </a>
+    </nav>
 
     <script src="load-navbar.js"></script>
     <script type="module" src="app.js"></script>

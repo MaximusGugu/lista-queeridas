@@ -7,6 +7,9 @@ const docTimesRef = doc(db, "sistema", "montador_times");
 const docBancoRef = doc(db, "sistema", "banco_notas");
 let players = []; let teams = []; let fase = "rating"; let bancoPermanente = {};
 
+// Variável local para armazenar os vínculos antes de salvar
+let vinculosTemporarios = {}; 
+
 function ordenarJogadoresTime(jogadores) {
     return jogadores.sort((a, b) => {
         if (a.locked && !b.locked) return -1;
@@ -49,32 +52,34 @@ function atualizarUI() {
           aC = document.getElementById("areaConfigTimes"), 
           aA = document.getElementById("areaAcoesFinal");
     
+    if (!aR || !aT || !aC || !aA) return;
+
     if ((!players || players.length === 0) && teams.length === 0) {
-        if(aR) aR.style.display = "none";
-        if(aT) aT.style.display = "none";
-        if(aC) aC.style.display = "none";
-        if(aA) aA.style.display = "none";
+        aR.style.display = "none";
+        aT.style.display = "none";
+        aC.style.display = "none";
+        aA.style.display = "none";
         return;
     }
 
     const pendentes = players.filter(p => !bancoPermanente[p.nome]);
 
     if (pendentes.length > 0 && fase === "rating") {
-        if(aR) aR.style.display = "block";
-        if(aC) aC.style.display = "none";
-        if(aT) aT.style.display = "none";
-        if(aA) aA.style.display = "none";
+        aR.style.display = "block";
+        aC.style.display = "none";
+        aT.style.display = "none";
+        aA.style.display = "none";
         renderRatingList(pendentes);
     } else {
-        if(aR) aR.style.display = "none";
-        if(aC) aC.style.display = "flex";
-        if(aA) aA.style.display = "flex";
+        aR.style.display = "none";
+        aC.style.display = "flex";
+        aA.style.display = "flex";
         
         if (fase === "teams" && teams.length > 0) {
-            if(aT) aT.style.display = "block";
+            aT.style.display = "block";
             renderTeams();
         } else {
-            if(aT) aT.style.display = "none";
+            aT.style.display = "none";
         }
     }
 }
@@ -83,37 +88,149 @@ function formatarNome(n) { return n ? n.toLowerCase().split(' ').map(w => w.char
 
 function renderRatingList(pendentes) {
     const cont = document.getElementById("areaRating");
-    cont.innerHTML = '<p class="label-instrucao">Nomes novos detectados. Verifique o nível:</p>';
+    cont.innerHTML = '<p class="label-instrucao">Nomes novos detectados. Verifique o nível ou vincule a um jogador existente:</p>';
     
     pendentes.forEach(p => {
         const div = document.createElement("div");
-        div.className = "item-compra";
+        div.className = "item-compra item-rating-pendente";
+        div.id = `card-${p.id}`;
         div.style.flexDirection = "column";
         div.style.alignItems = "stretch";
         div.style.padding = "15px";
-        div.innerHTML = `
+        div.style.gap = "12px";
+        
+        // Verifica se este jogador já foi marcado para vínculo nesta sessão (memória local)
+        const nomeVinculado = vinculosTemporarios[p.id];
+
+        let htmlInterno = `
             <div class="row-between">
-                <span style="font-weight:bold;">${p.nome}</span>
-                <div class="qty-controls mini">
+                <span style="font-weight:bold; font-size: 16px;">${p.nome}</span>
+                <div class="qty-controls mini" style="${nomeVinculado ? 'opacity:0.3; pointer-events:none;' : ''}">
                     <button class="btn-qty" onclick="window.changeNewPlayerLevel('${p.id}', -1)">-</button>
                     <span class="level-num" id="lvl-${p.id}">${p.level || 3}</span>
                     <button class="btn-qty" onclick="window.changeNewPlayerLevel('${p.id}', 1)">+</button>
                 </div>
             </div>
-            <div style="margin-top:10px; font-size:11px;">
-                <label><input type="checkbox" ${p.allStars ? 'checked' : ''} onchange="window.setNewAllStar('${p.id}', this.checked)"> Marcar All Star ⭐</label>
-            </div>
         `;
+
+        if (nomeVinculado) {
+            htmlInterno += `
+                <div style="background: #ecfdf5; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div style="color: #047857; font-weight: 800; font-size: 13px;">✅ VINCULANDO A: ${nomeVinculado}</div>
+                    <button onclick="window.cancelarVinculo('${p.id}')" style="background:none; border:none; color:#999; font-size:10px; text-decoration:underline; cursor:pointer; margin-top:5px;">Desfazer vínculo</button>
+                </div>
+            `;
+        } else {
+            htmlInterno += `
+                <div class="vincular-container" id="vinc-cont-${p.id}" style="background: rgba(0,0,0,0.03); padding: 10px; border-radius: 8px;">
+                    <label style="font-size: 10px; font-weight: bold; color: var(--text-muted); display: block; margin-bottom: 5px;">BUSCAR NO BANCO PARA VINCULAR:</label>
+                    <input type="text" class="input-modal" style="margin-bottom: 0; flex: 1; font-size: 13px; padding: 10px; border: 1px solid #ddd;" 
+                            placeholder="Digite o nome correto aqui..." 
+                            oninput="window.buscarParaVincular('${p.id}', this.value)">
+                    <div id="results-${p.id}" class="vincular-results" style="margin-top: 5px; max-height: 150px; overflow-y: auto; display: none; border: 1px solid #ddd; border-radius: 6px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+
+                <div style="font-size:11px; display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="star-${p.id}" ${p.allStars ? 'checked' : ''} onchange="window.setNewAllStar('${p.id}', this.checked)"> 
+                    <label for="star-${p.id}" style="margin:0; cursor:pointer; font-weight: bold; color: var(--text-muted);">MARCAR COMO ALL STAR ⭐</label>
+                </div>
+            `;
+        }
+
+        div.innerHTML = htmlInterno;
         cont.appendChild(div);
     });
 
     const b = document.createElement("button");
     b.className = "btn btn-main";
     b.style.marginTop = "15px";
-    b.innerText = "CONCLUIR E MONTAR";
+    b.innerText = "CONCLUIR E MONTAR TIMES";
     b.onclick = () => window.cadastrarNovosEContinuar();
     cont.appendChild(b);
 }
+
+window.buscarParaVincular = (playerId, query) => {
+    const resultsDiv = document.getElementById(`results-${playerId}`);
+    if (!query || query.length < 2) {
+        resultsDiv.style.display = "none";
+        return;
+    }
+
+    const q = query.toLowerCase();
+    const matches = Object.keys(bancoPermanente)
+        .filter(nome => nome.toLowerCase().includes(q) || (bancoPermanente[nome].apelidos || "").toLowerCase().includes(q))
+        .slice(0, 5);
+
+    if (matches.length > 0) {
+        resultsDiv.style.display = "block";
+        resultsDiv.innerHTML = matches.map(m => `
+            <div class="result-item" 
+                 style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; align-items: center; background: white;"
+                 onclick="window.setVinculoLocal('${playerId}', '${m.replace(/'/g, "\\'")}')">
+                <span style="font-weight: 500;">${m} <small style="color: #999;">(Nível ${bancoPermanente[m].level})</small></span>
+                <span style="color: #059669; font-weight: 800; font-size: 10px;">SELECIONAR</span>
+            </div>
+        `).join('');
+    } else {
+        resultsDiv.style.display = "none";
+    }
+};
+
+// Apenas marca localmente, sem salvar no Firebase ainda
+window.setVinculoLocal = (playerId, nomeOficial) => {
+    vinculosTemporarios[playerId] = nomeOficial;
+    atualizarUI();
+};
+
+window.cancelarVinculo = (playerId) => {
+    delete vinculosTemporarios[playerId];
+    atualizarUI();
+};
+
+window.cadastrarNovosEContinuar = async () => {
+    const pendentes = players.filter(p => !bancoPermanente[p.nome]);
+    let houveAlteracaoNoBanco = false;
+
+    pendentes.forEach(p => {
+        const nomeOficial = vinculosTemporarios[p.id];
+
+        if (nomeOficial) {
+            // CASO 1: FOI VINCULADO
+            const dadosNoBanco = bancoPermanente[nomeOficial];
+            let apelidosAtuais = dadosNoBanco.apelidos || "";
+            const listaApelidos = apelidosAtuais.split(',').map(s => s.trim()).filter(s => s !== "");
+            
+            if (!listaApelidos.includes(p.nome)) {
+                listaApelidos.push(p.nome);
+                bancoPermanente[nomeOficial].apelidos = listaApelidos.join(', ');
+                houveAlteracaoNoBanco = true;
+            }
+
+            // Atualiza o jogador da lista para os dados oficiais
+            p.nome = nomeOficial;
+            p.level = dadosNoBanco.level;
+            p.allStars = !!dadosNoBanco.allStars;
+
+        } else {
+            // CASO 2: CADASTRO NOVO (MANUAL)
+            bancoPermanente[p.nome] = { 
+                level: p.level, 
+                allStars: !!p.allStars, 
+                apelidos: "" 
+            };
+            houveAlteracaoNoBanco = true;
+        }
+    });
+
+    if (houveAlteracaoNoBanco) {
+        await setDoc(docBancoRef, bancoPermanente);
+    }
+    
+    vinculosTemporarios = {}; // Limpa memória local
+    fase = "teams";
+    await salvarFirebase();
+};
 
 window.changeNewPlayerLevel = (id, d) => {
     const p = players.find(x => x.id === id);
@@ -126,21 +243,6 @@ window.changeNewPlayerLevel = (id, d) => {
 window.setNewAllStar = (id, v) => {
     const p = players.find(x => x.id === id);
     if (p) p.allStars = v;
-};
-
-window.cadastrarNovosEContinuar = async () => {
-    const pendentes = players.filter(p => !bancoPermanente[p.nome]);
-    pendentes.forEach(p => {
-        bancoPermanente[p.nome] = { 
-            level: p.level, 
-            allStars: !!p.allStars, 
-            apelidos: "" 
-        };
-    });
-    
-    await setDoc(docBancoRef, bancoPermanente);
-    fase = "teams";
-    await salvarFirebase();
 };
 
 window.toggleLock = async (pId) => {
@@ -208,7 +310,6 @@ function renderTeams() {
         sec.className = "team-section";
         
         const jogadoresOrdenados = ordenarJogadoresTime([...team.players]);
-
         const isDefault = /^Time \d+$/i.test(team.nome);
         const cssClass = isDefault ? "is-default" : "is-custom";
 
@@ -242,41 +343,31 @@ function renderTeams() {
         cont.appendChild(sec);
 
         new Sortable(sec.querySelector('.team-list-drop'), {
-            group: 'teams',
-            animation: 150,
-            handle: '.drag-handle',
+            group: 'teams', animation: 150, handle: '.drag-handle',
             onEnd: async (evt) => {
                 if (evt.from === evt.to) return;
-                
-                const fromTeamId = parseInt(evt.from.getAttribute('data-team-id'));
-                const toTeamId = parseInt(evt.to.getAttribute('data-team-id'));
-                const playerId = evt.item.getAttribute('data-player-id');
+                const fromId = parseInt(evt.from.getAttribute('data-team-id'));
+                const toId = parseInt(evt.to.getAttribute('data-team-id'));
+                const pId = evt.item.getAttribute('data-player-id');
+                const fromT = teams.find(t => t.id === fromId);
+                const toT = teams.find(t => t.id === toId);
+                const pMov = fromT.players.find(p => p.id === pId);
+                const cand = toT.players.filter(p => !p.locked && p.id !== pId);
 
-                const fromTeam = teams.find(t => t.id === fromTeamId);
-                const toTeam = teams.find(t => t.id === toTeamId);
-                const pMoved = fromTeam.players.find(p => p.id === playerId);
-
-                const candidates = toTeam.players.filter(p => !p.locked && p.id !== playerId);
-
-                if (candidates.length > 0) {
-                    candidates.sort((a, b) => Math.abs(a.level - pMoved.level) - Math.abs(b.level - pMoved.level));
-                    const pSwap = candidates[0];
-
-                    fromTeam.players = fromTeam.players.filter(p => p.id !== playerId);
-                    toTeam.players = toTeam.players.filter(p => p.id !== pSwap.id);
-
-                    toTeam.players.push(pMoved);
-                    fromTeam.players.push(pSwap);
-
-                    mostrarToastMover(evt.originalEvent.pageX, evt.originalEvent.pageY, `Troca: ${pMoved.nome} ↔ ${pSwap.nome}`);
+                if (cand.length > 0) {
+                    cand.sort((a, b) => Math.abs(a.level - pMov.level) - Math.abs(b.level - pMov.level));
+                    const pSwap = cand[0];
+                    fromT.players = fromT.players.filter(p => p.id !== pId);
+                    toT.players = toT.players.filter(p => p.id !== pSwap.id);
+                    toT.players.push(pMov);
+                    fromT.players.push(pSwap);
+                    mostrarToastMover(evt.originalEvent.pageX, evt.originalEvent.pageY, `Troca: ${pMov.nome} ↔ ${pSwap.nome}`);
                 } else {
-                    fromTeam.players = fromTeam.players.filter(p => p.id !== playerId);
-                    toTeam.players.push(pMoved);
+                    fromT.players = fromT.players.filter(p => p.id !== pId);
+                    toT.players.push(pMov);
                 }
-
-                fromTeam.players = ordenarJogadoresTime(fromTeam.players);
-                toTeam.players = ordenarJogadoresTime(toTeam.players);
-
+                fromT.players = ordenarJogadoresTime(fromT.players);
+                toT.players = ordenarJogadoresTime(toT.players);
                 await salvarFirebase();
             }
         });
@@ -284,11 +375,8 @@ function renderTeams() {
 }
 
 function inicializarEventosTimes() {
-    // CONSERTO: Botão Colar Lista funcionando
     const btnOpenImport = document.getElementById("btnOpenImport");
-    if(btnOpenImport) {
-        btnOpenImport.onclick = () => window.abrirModal('modalImport');
-    }
+    if(btnOpenImport) btnOpenImport.onclick = () => window.abrirModal('modalImport');
 
     const btnImp = document.getElementById("btnConfirmarImport");
     if(btnImp) {
@@ -299,8 +387,13 @@ function inicializarEventosTimes() {
             players = texto.split('\n').map(linha => {
                 const nomeLimpo = linha.replace(/^\d+[\s.-]*/, '').replace(/[✅|✅️]/g, '').trim();
                 const nFormatado = formatarNome(nomeLimpo);
-                const m = Object.keys(bancoPermanente).find(k => k.toLowerCase() === nFormatado.toLowerCase());
-                
+                let m = Object.keys(bancoPermanente).find(k => k.toLowerCase() === nFormatado.toLowerCase());
+                if (!m) {
+                    m = Object.keys(bancoPermanente).find(k => {
+                        const apelidos = (bancoPermanente[k].apelidos || "").toLowerCase().split(',').map(s => s.trim());
+                        return apelidos.includes(nFormatado.toLowerCase());
+                    });
+                }
                 return {
                     id: "p-" + Math.random().toString(36).substr(2, 9),
                     nome: m || nFormatado,
@@ -310,8 +403,7 @@ function inicializarEventosTimes() {
                 };
             }).filter(p => p.nome.length > 1);
 
-            teams = [];
-            fase = "rating";
+            teams = []; fase = "rating";
             await salvarFirebase();
             window.fecharModal('modalImport');
         };
@@ -321,80 +413,47 @@ function inicializarEventosTimes() {
     if (btnGerar) {
         btnGerar.onclick = async () => {
             const nTeams = parseInt(document.getElementById("qtdTimes").value);
-            
-            let todosJogadores = [];
-            if (teams.length > 0) {
-                teams.forEach(t => todosJogadores.push(...t.players));
-            } else {
-                todosJogadores = [...players];
-            }
-
-            if (todosJogadores.length === 0) return;
+            let todos = (teams.length > 0) ? teams.flatMap(t => t.players) : [...players];
+            if (todos.length === 0) return;
 
             let nTA = Array.from({ length: nTeams }, (_, i) => ({ 
-                id: i, 
-                nome: (teams[i] && teams[i].nome) ? teams[i].nome : `Time ${i + 1}`, 
-                players: [] 
+                id: i, nome: (teams[i] && teams[i].nome) ? teams[i].nome : `Time ${i + 1}`, players: [] 
             }));
 
             let livres = [];
-            todosJogadores.forEach(p => {
+            todos.forEach(p => {
                 if (p.locked) {
-                    const timeOriginal = teams.find(t => t.players.some(tp => tp.id === p.id));
-                    if (timeOriginal && timeOriginal.id < nTeams) {
-                        nTA[timeOriginal.id].players.push(p);
-                    } else {
-                        p.locked = false;
-                        livres.push(p);
-                    }
-                } else {
-                    livres.push(p);
-                }
+                    const tOrig = teams.find(t => t.players.some(tp => tp.id === p.id));
+                    if (tOrig && tOrig.id < nTeams) nTA[tOrig.id].players.push(p);
+                    else { p.locked = false; livres.push(p); }
+                } else { livres.push(p); }
             });
 
-            livres.sort((a, b) => b.level - a.level);
-            livres.forEach(p => {
-                nTA.sort((a, b) => {
-                    const somaA = a.players.reduce((s, pl) => s + pl.level, 0);
-                    const somaB = b.players.reduce((s, pl) => s + pl.level, 0);
-                    return somaA - somaB;
-                });
+            livres.sort((a, b) => b.level - a.level).forEach(p => {
+                nTA.sort((a, b) => a.players.reduce((s, pl) => s + pl.level, 0) - b.players.reduce((s, pl) => s + pl.level, 0));
                 nTA[0].players.push(p);
             });
 
-            teams = nTA.map(team => ({
-                ...team,
-                players: ordenarJogadoresTime(team.players)
-            })).sort((a, b) => a.id - b.id);
-
+            teams = nTA.map(t => ({ ...t, players: ordenarJogadoresTime(t.players) })).sort((a, b) => a.id - b.id);
             fase = "teams";
             await salvarFirebase();
         };
     }
 
-    const btnLimpar = document.getElementById("btnLimpar");
-    if(btnLimpar) {
-        btnLimpar.onclick = async () => {
-            if(confirm("Limpar tudo?")) {
-                players = []; teams = []; fase = "rating";
-                await salvarFirebase();
-            }
-        };
-    }
+    document.getElementById("btnLimpar").onclick = async () => {
+        if(confirm("Limpar tudo?")) { players = []; teams = []; fase = "rating"; await salvarFirebase(); }
+    };
     
-    const btnCopy = document.getElementById("btnCopyTimes");
-    if(btnCopy) {
-        btnCopy.onclick = () => {
-            let txt = "⭐ *TIMES QUEERIDAS* ⭐\n\n";
-            teams.forEach(t => {
-                txt += `*${t.nome.toUpperCase()}*\n`;
-                t.players.forEach(p => txt += `- ${p.nome}\n`);
-                txt += `\n`;
-            });
-            navigator.clipboard.writeText(txt);
-            alert("Times copiados!");
-        };
-    }
+    document.getElementById("btnCopyTimes").onclick = () => {
+        let txt = "⭐ *TIMES QUEERIDAS* ⭐\n\n";
+        teams.forEach(t => {
+            txt += `*${t.nome.toUpperCase()}*\n`;
+            t.players.forEach(p => txt += `- ${p.nome}\n`);
+            txt += `\n`;
+        });
+        navigator.clipboard.writeText(txt);
+        alert("Times copiados!");
+    };
 }
 
 function mostrarToastMover(x, y, texto) {
@@ -402,11 +461,9 @@ function mostrarToastMover(x, y, texto) {
     toast.className = 'toast-copiado';
     toast.innerText = texto;
     toast.style.position = 'fixed';
-    toast.style.left = `${x}px`;
-    toast.style.top = `${y}px`;
+    toast.style.left = `${x}px`; toast.style.top = `${y}px`;
     toast.style.zIndex = '10000';
     toast.style.backgroundColor = 'rgba(0,0,0,0.8)';
-    toast.style.whiteSpace = 'nowrap';
     document.body.appendChild(toast);
     setTimeout(() => { if(toast) toast.remove(); }, 1500);
 }
