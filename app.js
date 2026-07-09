@@ -29,6 +29,8 @@ auth.onAuthStateChanged(async (user) => {
             if (snap.exists() && snap.data().listas) {
                 db_local.listas = snap.data().listas;
                 atualizarDatasAutomaticas();
+                const spinner = document.getElementById("loadingSpinner");
+                if(spinner) spinner.style.display = "none";
                 render();
             } else { inicializarBancoNovo(); }
         });
@@ -45,7 +47,6 @@ async function salvar() {
         const snap = await getDoc(docRef);
         const listasNuvem = snap.exists() && snap.data().listas ? snap.data().listas : {};
         const listasMescladas = mesclarListasComNuvem(listasNuvem, db_local.listas);
-
         db_local.listas = listasMescladas;
         await setDoc(docRef, { listas: listasMescladas });
     } 
@@ -54,7 +55,6 @@ async function salvar() {
 
 function mesclarListasComNuvem(listasNuvem, listasLocais) {
     const resultado = { ...listasNuvem };
-
     Object.entries(listasLocais).forEach(([idLista, listaLocal]) => {
         const listaNuvem = listasNuvem[idLista] || {};
         resultado[idLista] = {
@@ -66,7 +66,6 @@ function mesclarListasComNuvem(listasNuvem, listasLocais) {
             }
         };
     });
-
     return resultado;
 }
 
@@ -87,7 +86,6 @@ function carregarDadosNoModal(idLista) {
     const lista = db_local.listas[idLista];
     if (!lista) return;
     const c = lista.config;
-
     document.getElementById("cfgAdm").value = c.adm || "";
     document.getElementById("cfgNomeJogo").value = c.nomeJogo || "";
     document.getElementById("cfgQuadra").value = c.quadra || "";
@@ -111,7 +109,6 @@ function render() {
     const listaAtual = db_local.listas[aba_ativa];
     if (!listaAtual) return;
     const { nomeJogo, quadra, data, dia, inicio, fim, valor, limite, pix, adm, formAberto } = listaAtual.config;
-    
     document.body.className = `theme-${aba_ativa.split('_')[0].toLowerCase()}`;
     const tApp = document.getElementById("tituloApp");
     if(tApp) tApp.innerText = `LISTA ${nomeJogo.toUpperCase()}`;
@@ -145,7 +142,7 @@ function render() {
                     <button id="btnCopyFormLink" class="copy-link-btn">Copiar Link 🔗</button>
                 </div>
                 <div class="form-status-control">
-                    <span>STATUS: <b style="color:${formAberto ? '#059669' : '#e11d48'}">${formAberto ? '🔓 ABERTO (Aceitando nomes)' : '🔒 FECHADO (Link desativado)'}</b></span>
+                    <span>STATUS: <b style="color:${formAberto ? '#059669' : '#e11d48'}">${formAberto ? '🔓 ABERTO' : '🔒 FECHADO'}</b></span>
                     <button id="btnToggleForm" class="status-toggle-btn ${formAberto ? 'is-open' : 'is-closed'}">${formAberto ? 'FECHAR FORMULÁRIO' : 'ABRIR FORMULÁRIO'}</button>
                 </div>
             </div>
@@ -159,19 +156,15 @@ function renderLista(listaAtual, limite, adm) {
     const listaDOM = document.getElementById("listaJogadores");
     if (!listaDOM) return;
     listaDOM.innerHTML = "";
-    
-    // Item do ADM
     const divAdm = document.createElement("div");
     divAdm.className = "item-compra is-adm";
     divAdm.innerHTML = `<span class="num">1</span><span class="input-item" contenteditable="true">${formatarNome(adm)}</span><div style="width:26px; margin-right:5px;"></div><button class="btn-del" style="opacity:0">×</button>`;
     divAdm.querySelector('.input-item').onblur = (e) => { listaAtual.config.adm = formatarNome(e.target.innerText.trim()); salvar(); };
     listaDOM.appendChild(divAdm);
 
-    // Identifica quem são os jogadores dentro do limite principal (ADM + jogadores)
     const principal = listaAtual.jogadores.slice(0, limite - 1);
     const todosPagos = principal.length > 0 && principal.every(j => j.pago && j.nome.trim().length > 0);
 
-    // Preparar o botão para ser inserido no momento certo
     let bFechar = null;
     if (todosPagos) {
         bFechar = document.createElement("button");
@@ -181,22 +174,15 @@ function renderLista(listaAtual, limite, adm) {
     }
 
     let botaoInserido = false;
-
     listaAtual.jogadores.forEach((jog, index) => {
         const pos = index + 2;
-
-        // Se chegamos no limite da lista principal, insere o botão (se habilitado) e o divisor
         if (pos === limite + 1) {
-            if (bFechar) {
-                listaDOM.appendChild(bFechar);
-                botaoInserido = true;
-            }
+            if (bFechar) { listaDOM.appendChild(bFechar); botaoInserido = true; }
             const s = document.createElement("div");
             s.className = "espera-divider";
             s.innerText = "Lista de Espera ⏰";
             listaDOM.appendChild(s);
         }
-
         const div = document.createElement("div");
         div.className = `item-compra ${pos > limite ? 'modo-espera' : ''} ${jog.pago ? 'is-pago' : ''}`;
         div.setAttribute('data-id', jog.id);
@@ -212,12 +198,7 @@ function renderLista(listaAtual, limite, adm) {
         div.querySelector(".btn-del").onclick = () => { listaAtual.jogadores = listaAtual.jogadores.filter(j => j.id !== jog.id); salvar(); };
         listaDOM.appendChild(div);
     });
-
-    // CORREÇÃO: Se a lista terminou e o botão ainda não foi inserido (porque não atingiu o limite de espera), insere no final
-    if (bFechar && !botaoInserido) {
-        listaDOM.appendChild(bFechar);
-    }
-
+    if (bFechar && !botaoInserido) listaDOM.appendChild(bFechar);
     if (!listaDOM.dataset.sortable) {
          new Sortable(listaDOM, { animation: 150, handle: '.drag-handle', ghostClass: 'sortable-ghost', onEnd: () => reordenarItens() });
          listaDOM.dataset.sortable = "true";
@@ -251,6 +232,16 @@ function processarLinhaImportada(l) {
     return { id: "p-"+Date.now()+Math.random(), nome: formatarNome(n), pago: p };
 }
 
+function criarJogadoresVaziosParaLista(idLista) {
+    const lista = db_local.listas[idLista];
+    const totalVagas = Math.max(0, Number(lista?.config?.limite || 1) - 1);
+    return Array.from({ length: totalVagas }, (_, i) => ({
+        id: "p-" + Date.now() + "-" + i,
+        nome: "",
+        pago: false
+    }));
+}
+
 function calcularProximaData(diaSemana) {
     const mapaDias = { "Domingo": 0, "Segunda-Feira": 1, "Terça-Feira": 2, "Quarta-Feira": 3, "Quinta-Feira": 4, "Sexta-Feira": 5, "Sábado": 6 };
     if (mapaDias[diaSemana] === undefined) return "";
@@ -264,12 +255,9 @@ function calcularProximaData(diaSemana) {
 function dataEstaVencida(dataTexto) {
     const partes = /^(\d{2})\/(\d{2})$/.exec((dataTexto || "").trim());
     if (!partes) return true;
-
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-
     const data = new Date(hoje.getFullYear(), Number(partes[2]) - 1, Number(partes[1]));
-    data.setHours(0, 0, 0, 0);
     return data < hoje;
 }
 
@@ -277,15 +265,12 @@ function dataCombinaComDia(dataTexto, diaSemana) {
     const mapaDias = { "Domingo": 0, "Segunda-Feira": 1, "Terça-Feira": 2, "Quarta-Feira": 3, "Quinta-Feira": 4, "Sexta-Feira": 5, "Sábado": 6 };
     const partes = /^(\d{2})\/(\d{2})$/.exec((dataTexto || "").trim());
     if (!partes || mapaDias[diaSemana] === undefined) return false;
-
-    const hoje = new Date();
-    const data = new Date(hoje.getFullYear(), Number(partes[2]) - 1, Number(partes[1]));
+    const data = new Date(new Date().getFullYear(), Number(partes[2]) - 1, Number(partes[1]));
     return data.getDay() === mapaDias[diaSemana];
 }
 
 function atualizarDatasAutomaticas() {
     let houveMudanca = false;
-
     Object.values(db_local.listas).forEach(lista => {
         if (!lista?.config?.dia) return;
         if (!lista.config.data || dataEstaVencida(lista.config.data) || !dataCombinaComDia(lista.config.data, lista.config.dia)) {
@@ -296,19 +281,30 @@ function atualizarDatasAutomaticas() {
             }
         }
     });
-
     if (houveMudanca) salvar();
 }
 
 async function fecharListaEMontarTimes(listaAtual) {
     const pagantes = [];
+    let notaAtivaSugerida = "notaTodes";
+    if (aba_ativa.includes("ELAX")) notaAtivaSugerida = "notaElax";
+    if (aba_ativa.includes("ALLSTARS")) notaAtivaSugerida = "notaAllStars";
+
     const obterDadosCompleto = (nomeDigitado) => {
         const match = encontrarFuzzyMatch(nomeDigitado, bancoNotas);
         if (match) {
             const info = bancoNotas[match];
-            return { nome: match, level: Number(info.level || 3), allStars: !!info.allStars, locked: false };
+            return { 
+                nome: match, 
+                // Buscamos as notas REAIS do banco agora para enviar a foto correta
+                notaTodes: Number(info.notaTodes || info.level || 3),
+                notaElax: Number(info.notaElax || 3),
+                notaAllStars: Number(info.notaAllStars || 0),
+                allStars: !!info.allStars, 
+                locked: false 
+            };
         }
-        return { nome: formatarNome(nomeDigitado), level: 3, allStars: false, locked: false };
+        return { nome: formatarNome(nomeDigitado), notaTodes: 3, notaElax: 3, notaAllStars: 0, allStars: false, locked: false };
     };
 
     if (listaAtual.config.adm) pagantes.push({ id: "adm-"+Date.now(), ...obterDadosCompleto(listaAtual.config.adm) });
@@ -317,7 +313,13 @@ async function fecharListaEMontarTimes(listaAtual) {
     });
 
     const docTimesRef = doc(db, "sistema", "montador_times");
-    await setDoc(docTimesRef, { players: pagantes, teams: [], fase: "rating", timestamp: Date.now() });
+    await setDoc(docTimesRef, { 
+        players: pagantes, 
+        teams: [], 
+        fase: "rating", 
+        timestamp: Date.now(),
+        notaTipoAtiva: notaAtivaSugerida 
+    });
     window.location.href = "times.html";
 }
 
@@ -330,25 +332,16 @@ function inicializarEventosBotoes() {
             render();
         };
     });
-
     const bCfg = document.getElementById("btnConfig");
     if(bCfg) bCfg.onclick = () => {
         document.getElementById("cfgModalidade").value = aba_ativa;
         carregarDadosNoModal(aba_ativa);
         window.abrirModal('modalConfig');
     };
-
     const selModalidade = document.getElementById("cfgModalidade");
-    if(selModalidade) {
-        selModalidade.onchange = (e) => carregarDadosNoModal(e.target.value);
-    }
-
+    if(selModalidade) selModalidade.onchange = (e) => carregarDadosNoModal(e.target.value);
     const selDia = document.getElementById("cfgDia");
-    if(selDia) {
-        selDia.onchange = (e) => {
-            document.getElementById("cfgData").value = calcularProximaData(e.target.value);
-        };
-    }
+    if(selDia) selDia.onchange = (e) => { document.getElementById("cfgData").value = calcularProximaData(e.target.value); };
 
     const bSav = document.getElementById("btnSalvarConfig");
     if(bSav) bSav.onclick = async () => {
@@ -384,7 +377,13 @@ function inicializarEventosBotoes() {
         if (t) { db_local.listas[aba_ativa].jogadores = t.split('\n').map(l => processarLinhaImportada(l)).filter(j => j.nome.length > 0); salvar(); }
         window.fecharModal('modalImport');
     };
-    document.getElementById("btnClearAll").onclick = () => { if(confirm("Limpar lista?")) { db_local.listas[aba_ativa].jogadores = []; salvar(); } };
+    document.getElementById("btnClearAll").onclick = () => {
+        if(confirm("Limpar lista?")) {
+            const deveManterNumeros = aba_ativa === "ELAX_QUINTA" || aba_ativa === "PRAIA_DOMINGO";
+            db_local.listas[aba_ativa].jogadores = deveManterNumeros ? criarJogadoresVaziosParaLista(aba_ativa) : [];
+            salvar();
+        }
+    };
 }
 
 function vincularEventosResumo(listaAtual) {
@@ -395,7 +394,6 @@ function vincularEventosResumo(listaAtual) {
         listaAtual.jogadores.forEach((j, i) => { texto += `${i + 2} - ${formatarNome(j.nome)}${j.pago ? ' ✅' : ''}\n`; });
         navigator.clipboard.writeText(texto).then(() => mostrarToast(e.clientX, e.clientY));
     };
-
     const btnToggleForm = document.getElementById("btnToggleForm");
     if (btnToggleForm) {
         btnToggleForm.onclick = async () => {
@@ -404,7 +402,6 @@ function vincularEventosResumo(listaAtual) {
             render();
         };
     }
-
     const btnCopyFormLink = document.getElementById("btnCopyFormLink");
     if (btnCopyFormLink) {
         btnCopyFormLink.onclick = (e) => {
@@ -413,7 +410,6 @@ function vincularEventosResumo(listaAtual) {
             navigator.clipboard.writeText(linkPublico).then(() => mostrarToast(e.clientX, e.clientY));
         };
     }
-
     document.querySelectorAll('.edit-text').forEach(el => {
         el.onblur = () => {
             listaAtual.config[el.getAttribute('data-key')] = el.innerText.trim();

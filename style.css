@@ -105,6 +105,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
     min-height: 48px;
 }
 
+/* BG VERDE PARA PAGOS (igual ao is-locked dos times) */
 .item-compra.is-pago {
     background-color: #f0fdf4 !important; 
     border: 1px solid #bbf7d0 !important;
@@ -162,7 +163,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 
 .modo-espera { background-color: transparent; border: 1px dashed #D1D8E0; opacity: 0.7; }
 
-/* --- MODAIS --- */
+/* --- MODAIS (TAMANHO AMPLIADO PARA DESKTOP) --- */
 .modal-overlay { 
     position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
     background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; 
@@ -170,39 +171,67 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 }
 
 .modal-content { 
-    background: white; padding: 25px; border-radius: 20px; 
-    width: 100%; max-width: 450px; max-height: calc(100dvh - 20px); 
+    background: white; padding: 22px; border-radius: 18px; 
+    width: 95%; max-width: 620px;
+    max-height: calc(100dvh - 20px);
     overflow-y: auto; overflow-x: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
     position: relative;
 }
 
-.modal-content h3 { margin-top: 0; margin-bottom: 14px; color: var(--text-dark); font-weight: 800; font-size: 18px; }
+.modal-config-content {
+    max-width: 760px;
+    padding: 14px 16px;
+}
 
-.campo-modal { margin-bottom: 15px; width: 100%; }
+.modal-content::-webkit-scrollbar { width: 8px; }
+.modal-content::-webkit-scrollbar-track { background: transparent; }
+.modal-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+
+.modal-content h3 { margin-top: 0; margin-bottom: 10px; color: var(--text-dark); font-weight: 800; font-size: 17px; text-align: center; }
+
+.modal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.modal-config-content .row-gap { gap: 8px; margin-bottom: 0; }
+.modal-config-content .row-gap .campo-modal { flex: 1; min-width: 0; }
+
+.campo-modal { margin-bottom: 7px; width: 100%; }
 .campo-modal label { 
-    display: block; font-size: 10px; font-weight: 700; color: var(--text-muted); 
-    margin-bottom: 5px; text-transform: uppercase; 
+    display: block; font-size: 9px; font-weight: 800; color: var(--text-muted); 
+    margin-bottom: 3px; text-transform: uppercase; line-height: 1.15;
 }
 
 .input-modal { 
-    border: 2px solid var(--bg-app); padding: 12px; border-radius: 10px; 
-    width: 100%; font-family: inherit; font-size: 14px; color: var(--text-dark);
+    border: 2px solid var(--bg-app); padding: 7px 9px; border-radius: 9px; 
+    width: 100%; min-height: 34px; font-family: inherit; font-size: 12px; color: var(--text-dark);
 }
 
 .input-modal:focus { border-color: var(--color-praia); outline: none; background: #f0f9ff; }
+.modal-primary-select { border-color: var(--text-dark) !important; font-weight: 800; font-size: 13px; }
 
-/* --- ESTILOS PADRONIZADOS PARA O MODAL DE IMPORTAR (COLAR LISTA) --- */
-.modal-import-content { max-width: 620px; }
-
-.import-textarea {
-    display: block; width: 100%; min-height: 150px; padding: 12px;
-    border: 2px solid var(--bg-app); border-radius: 10px;
-    font-family: inherit; font-size: 14px; resize: vertical; margin-bottom: 15px;
+.config-panel {
+    background: #f0f9ff; padding: 9px; border-radius: 10px; border: 1px solid #bae6fd;
 }
-.import-textarea:focus { border-color: var(--color-praia); outline: none; background: #f0f9ff; }
+.config-panel label { color: #0369a1; }
+.config-panel select { border-color: #0ea5e9; font-weight: 800; }
+.config-panel textarea { min-height: 42px; height: 42px; resize: vertical; margin-bottom: 7px; }
 
 .modal-buttons { 
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; 
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; 
+}
+
+.modal-buttons .btn { min-height: 38px; font-size: 11px; }
+
+.import-textarea {
+    display: block; width: 100%; min-height: 250px; padding: 15px;
+    border: 2px solid var(--bg-app); border-radius: 14px;
+    font-family: inherit; font-size: 15px; resize: vertical; margin-bottom: 15px;
+}
+
+@media (max-width: 600px) {
+    .modal-content { padding: 20px; border-radius: 20px; }
+    .modal-grid { grid-template-columns: 1fr; gap: 0; }
+    .config-panel { grid-column: span 1; padding: 15px; }
+    .modal-config-content .row-gap { flex-direction: column; gap: 0; }
+    .modal-buttons { grid-template-columns: 1fr; }
 }
 
 /* --- TOAST FLUTUANTE (ANIMAÇÃO) --- */

@@ -8,77 +8,25 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Ajustes específicos para alinhar com a estética das outras telas */
         .player-actions { display: flex; gap: 10px; margin-bottom: 15px; }
         .player-actions .btn { flex: 1; padding: 10px; font-size: 11px; }
-        
         #listaBanco { margin-top: 10px; }
-        
-        /* Estilização do formulário de adição para parecer o info-card */
-        .add-form {
-            background: white;
-            padding: 18px;
-            border-radius: 20px;
-            margin-bottom: 20px;
-            border: 2px solid var(--color-allstars);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-        
-        .back-link {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            text-decoration: none;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            z-index: 20;
-        }
-
+        .add-form { background: white; padding: 18px; border-radius: 20px; margin-bottom: 20px; border: 2px solid var(--color-allstars); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .back-link { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); text-decoration: none; color: white; font-size: 24px; font-weight: bold; z-index: 20; }
         .btn-edit { background: #E0F2FE; color: #0284C7; border: none; font-size: 14px; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .action-buttons { display: flex; gap: 6px; }
-
-            /* CONTROLADOR MINI PARA A LISTA DO BANCO */
-    .qty-controls.mini { 
-        padding: 2px 5px; 
-        gap: 4px; 
-        border-radius: 6px; 
-        background: rgba(0,0,0,0.03);
-        margin-right: 5px;
-        display: flex;
-        align-items: center;
-    }
-    .qty-controls.mini .btn-qty { 
-        width: 22px; 
-        height: 22px; 
-        font-size: 14px; 
-        border-radius: 4px; 
-        background: rgba(0,0,0,0.1);
-        border: none;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .qty-controls.mini .level-num { 
-        font-size: 13px; 
-        min-width: 14px; 
-        font-weight: 800;
-        text-align: center;
-        color: var(--secondary);
-    }
-
-    /* Garante que o nome não quebre e os botões fiquem alinhados */
-    .item-compra {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 10px 15px;
-    }
+        .qty-controls.mini { padding: 2px 5px; gap: 4px; border-radius: 6px; background: rgba(0,0,0,0.03); margin-right: 5px; display: flex; align-items: center; }
+        .qty-controls.mini .btn-qty { width: 22px; height: 22px; font-size: 14px; border-radius: 4px; background: rgba(0,0,0,0.1); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .qty-controls.mini .level-num { font-size: 13px; min-width: 14px; font-weight: 800; text-align: center; color: var(--secondary); }
+        .item-compra { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; }
+        
+        /* Ajuste para as múltiplas notas no card */
+        .notas-grid-cadastro { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .nota-input-group { background: #f8fafc; padding: 8px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .nota-input-group label { font-size: 9px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; }
     </style>
 </head>
-<body class="theme-allstars"> <!-- Usa o tema Roxo por padrão -->
+<body class="theme-allstars">
     <header class="header-compact">
         <div class="container" style="display: flex; justify-content: center; position: relative;">
             <a href="times.html" class="back-link">‹</a>
@@ -87,36 +35,52 @@
     </header>
 
     <main class="container" style="margin-top: 20px;">
-        
-        <!-- BACKUP ACTIONS -->
         <div class="player-actions">
             <button class="btn btn-sub" onclick="exportarNotas()">📤 EXPORTAR NOTAS</button>
             <button class="btn btn-sub" onclick="document.getElementById('fileInput').click()">📥 IMPORTAR NOTAS</button>
             <input type="file" id="fileInput" style="display:none" onchange="importarNotas(event)">
         </div>
 
-        <!-- FORMULÁRIO ADICIONAR (Estilo Info-Card) -->
         <div class="add-form">
             <div class="campo-modal">
                 <label>Nome Completo:</label>
                 <input type="text" id="addNome" class="input-modal" placeholder="Gustavo José" style="margin-bottom: 15px;">
             </div>
 
-            <!-- NOVO CAMPO DE APELIDOS -->
             <div class="campo-modal">
                 <label>Apelidos / Como ele escreve:</label>
-                <input type="text" id="addApelidos" class="input-modal" placeholder="Ex: Gustavo S, Gugu. Gu S" style="margin-bottom: 15px;">
+                <input type="text" id="addApelidos" class="input-modal" placeholder="Ex: Gustavo S, Gugu" style="margin-bottom: 15px;">
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px; background: #f3e8ff; padding: 10px; border-radius: 12px;">
+                <input type="checkbox" id="addAllStars" style="width: 20px; height: 20px; cursor: pointer; margin: 0;" onchange="toggleNotaAllStars('add')">
+                <label for="addAllStars" style="margin: 0; font-size: 11px; font-weight: bold; color: var(--color-allstars); cursor: pointer; text-transform: uppercase;">HABILITAR ALL STARS ⭐</label>
             </div>
             
-            <div class="row-between" style="align-items: center; gap: 15px; margin-bottom: 15px;">
-                <div class="qty-controls">
-                    <button class="btn-qty" onclick="ajustarNovoNivel(-1)">-</button>
-                    <span id="novoNivel" class="level-num">3</span>
-                    <button class="btn-qty" onclick="ajustarNovoNivel(1)">+</button>
+            <div class="notas-grid-cadastro">
+                <div class="nota-input-group">
+                    <label>Nota Todes</label>
+                    <div class="qty-controls">
+                        <button class="btn-qty" onclick="ajustarNotaManual('addNotaTodes', -1)">-</button>
+                        <span id="addNotaTodes" class="level-num">3</span>
+                        <button class="btn-qty" onclick="ajustarNotaManual('addNotaTodes', 1)">+</button>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="addAllStars" style="width: 20px; height: 20px; cursor: pointer; margin: 0;">
-                    <label for="addAllStars" style="margin: 0; font-size: 11px; font-weight: bold; color: var(--text-muted); cursor: pointer; text-transform: uppercase;">ALL STARS ⭐</label>
+                <div class="nota-input-group">
+                    <label>Nota Elax</label>
+                    <div class="qty-controls">
+                        <button class="btn-qty" onclick="ajustarNotaManual('addNotaElax', -1)">-</button>
+                        <span id="addNotaElax" class="level-num">3</span>
+                        <button class="btn-qty" onclick="ajustarNotaManual('addNotaElax', 1)">+</button>
+                    </div>
+                </div>
+                <div class="nota-input-group" id="groupAddAllStars" style="display: none; grid-column: span 2;">
+                    <label>Nota All Stars ⭐</label>
+                    <div class="qty-controls">
+                        <button class="btn-qty" onclick="ajustarNotaManual('addNotaAllStars', -1)">-</button>
+                        <span id="addNotaAllStars" class="level-num">3</span>
+                        <button class="btn-qty" onclick="ajustarNotaManual('addNotaAllStars', 1)">+</button>
+                    </div>
                 </div>
             </div>
             
@@ -127,54 +91,66 @@
 
         <p class="label-instrucao">Jogadores Cadastrados:</p>
         <div id="listaBanco" class="list-container">
-            <!-- Spinner de Carregamento -->
             <div id="loadingSpinner" class="spinner-container">
                 <div class="spinner"></div>
                 <p style="font-size: 11px; font-weight: bold; color: var(--text-muted);">CARREGANDO BANCO...</p>
             </div>
-            <!-- Lista será injetada aqui -->
         </div>
-
     </main>
 
     <!-- MODAL EDITAR JOGADOR -->
     <div id="modalEditarJogador" class="modal-overlay" style="display:none;">
-    <div class="modal-content">
-        <h3>Editar Jogador</h3>
-        <div class="campo-modal">
-            <label>Nome do Jogador (Chave):</label>
-            <input type="text" id="editNome" class="input-modal">
-        </div>
+        <div class="modal-content">
+            <h3>Editar Jogador</h3>
+            <div class="campo-modal">
+                <label>Nome do Jogador:</label>
+                <input type="text" id="editNome" class="input-modal">
+            </div>
+            <div class="campo-modal">
+                <label>Apelidos:</label>
+                <input type="text" id="editApelidos" class="input-modal">
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 8px; margin: 15px 0; background: #f3e8ff; padding: 10px; border-radius: 12px;">
+                <input type="checkbox" id="editAllStars" style="width: 20px; height: 20px;" onchange="toggleNotaAllStars('edit')">
+                <label for="editAllStars" style="font-size: 11px; font-weight: bold; color: var(--color-allstars);">HABILITAR ALL STARS ⭐</label>
+            </div>
 
-        <div class="campo-modal" style="margin-top: 15px;">
-            <label>Apelidos / Como ele escreve (separe por vírgula):</label>
-            <input type="text" id="editApelidos" class="input-modal" placeholder="Ex: Gustavo S, Gugu. Gu S">
-        </div>
-        
-        <div class="campo-modal" style="margin-top: 15px;">
-            <label>Nível (1 a 10) e Categoria:</label>
-            <div class="row-between" style="align-items: center; gap: 15px;">
-                <div class="qty-controls">
-                    <button class="btn-qty" onclick="window.ajustarEditarNivel(-1)">-</button>
-                    <span id="editNivel" class="level-num">3</span>
-                    <button class="btn-qty" onclick="window.ajustarEditarNivel(1)">+</button>
+            <div class="notas-grid-cadastro">
+                <div class="nota-input-group">
+                    <label>Todes</label>
+                    <div class="qty-controls">
+                        <button class="btn-qty" onclick="ajustarNotaManual('editNotaTodes', -1)">-</button>
+                        <span id="editNotaTodes" class="level-num">3</span>
+                        <button class="btn-qty" onclick="ajustarNotaManual('editNotaTodes', 1)">+</button>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="editAllStars" style="width: 20px; height: 20px; cursor: pointer; margin: 0;">
-                    <label for="editAllStars" style="margin: 0; font-size: 11px; font-weight: bold; color: var(--text-muted); cursor: pointer; text-transform: uppercase;">ALL STARS ⭐</label>
+                <div class="nota-input-group">
+                    <label>Elax</label>
+                    <div class="qty-controls">
+                        <button class="btn-qty" onclick="ajustarNotaManual('editNotaElax', -1)">-</button>
+                        <span id="editNotaElax" class="level-num">3</span>
+                        <button class="btn-qty" onclick="ajustarNotaManual('editNotaElax', 1)">+</button>
+                    </div>
+                </div>
+                <div class="nota-input-group" id="groupEditAllStars" style="display: none; grid-column: span 2;">
+                    <label>All Stars ⭐</label>
+                    <div class="qty-controls">
+                        <button class="btn-qty" onclick="ajustarNotaManual('editNotaAllStars', -1)">-</button>
+                        <span id="editNotaAllStars" class="level-num">3</span>
+                        <button class="btn-qty" onclick="ajustarNotaManual('editNotaAllStars', 1)">+</button>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="modal-buttons" style="margin-top: 20px;">
-            <button class="btn btn-main" onclick="window.salvarEdicaoJogador()" style="background: var(--color-praia);">SALVAR ALTERAÇÕES</button>
-            <button class="btn btn-sub" onclick="window.fecharModalEditar()">CANCELAR</button>
+            
+            <div class="modal-buttons">
+                <button class="btn btn-main" onclick="salvarEdicaoJogador()" style="background: var(--color-praia);">SALVAR ALTERAÇÕES</button>
+                <button class="btn btn-sub" onclick="fecharModalEditar()">CANCELAR</button>
+            </div>
         </div>
     </div>
-</div>
 
     <script type="module" src="jogadores.js"></script>
-
     <script src="load-navbar.js"></script>
 </body>
 </html>

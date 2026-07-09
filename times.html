@@ -11,18 +11,13 @@
     <style>
         main.container { padding-top: 15px; padding-bottom: 40px; }
         .bottom-actions { padding-bottom: 0 !important; margin-bottom: 10px; }
-
-        /* Controles de Nível */
         .qty-controls { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 10px; }
         .qty-controls.mini { padding: 2px 5px; gap: 4px; border-radius: 6px; background: rgba(0,0,0,0.03); margin-right: 5px; display: flex; align-items: center; }
         .qty-controls.mini .btn-qty { width: 22px; height: 22px; font-size: 14px; border-radius: 4px; background: rgba(0,0,0,0.1); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .qty-controls.mini .level-num { font-size: 13px; min-width: 14px; font-weight: 800; text-align: center; color: var(--secondary); }
-
         #areaTeams .item-compra { padding: 4px 10px; }
         .btn-qty { width: 28px; height: 28px; border-radius: 8px; border: none; background: #eee; color: #333; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; }
         .level-num { font-weight: 900; font-size: 16px; min-width: 15px; text-align: center; color: var(--secondary); }
-        
-        /* Seções de Times */
         .team-section { margin-bottom: 25px; }
         .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 5px; }
         .team-title { font-size: 22px; font-weight: 800; border: none; background: transparent; outline: none; width: 65%; padding: 2px 5px; transition: all 0.2s ease; border-bottom: 2px solid transparent; }
@@ -31,25 +26,29 @@
         .team-title:focus { color: var(--text-dark) !important; background: rgba(0,0,0,0.03); border-bottom: 2px solid var(--color-praia) !important; }
         .team-total { font-size: 12px; background: var(--bg-app); padding: 4px 10px; border-radius: 10px; font-weight: bold; opacity: 0.8; }
         .team-list-drop { min-height: 50px; border-radius: 15px; }
-        
-        /* Configurações */
-        .config-row { display: flex; gap: 10px; margin: 15px 0; align-items: stretch; }
-        .config-row select { flex: 1; padding: 12px 40px 12px 15px; border-radius: 12px; border: 1px solid #ddd; font-family: inherit; font-weight: bold; background: white; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 15px center; background-size: 12px; cursor: pointer; }
-        #btnGerarTimes { flex: 1.5; background: #00B4D8 !important; color: white !important; box-shadow: 0 4px 10px rgba(0, 180, 216, 0.3); }
+        .config-row { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; }
+        .config-row select { padding: 12px; border-radius: 12px; border: 1px solid #ddd; font-family: inherit; font-weight: bold; background: white; }
+        #btnGerarTimes { background: #00B4D8 !important; color: white !important; box-shadow: 0 4px 10px rgba(0, 180, 216, 0.3); padding: 16px; }
         .label-instrucao { font-size: 10px; font-weight: bold; margin: 15px 0 10px 0; opacity: 0.6; text-transform: uppercase; }
-
         .item-compra.is-locked { background-color: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; }
         .btn-lock { width: 28px; height: 28px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; background: rgba(0,0,0,0.05); color: #999; }
         .btn-lock.locked { background: #22c55e !important; color: white !important; }
-
-        /* Busca e Vínculo */
         .vincular-results { box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; }
         .result-item:hover { background-color: #f0f9ff !important; }
-        .result-item:active { background-color: #e0f2fe !important; }
         .item-rating-pendente { border-left: 4px solid #00B4D8 !important; background: white !important; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .new-player-rating-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 2px 0 8px; }
+        .rating-field { display: flex; flex-direction: column; gap: 4px; }
+        .rating-field label { font-size: 9px; font-weight: 800; color: #64748b; text-transform: uppercase; }
+        .rating-stepper { justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; padding: 5px; border-radius: 10px; margin: 0; }
+        .rating-stepper .btn-qty { width: 24px; height: 24px; border-radius: 7px; background: white; color: #475569; box-shadow: 0 1px 2px rgba(15,23,42,0.08); }
+        .rating-stepper .level-num { min-width: 20px; font-size: 14px; color: #0f172a; }
+        .allstar-toggle-row { font-size: 12px; display: flex; align-items: center; gap: 8px; color: #64748b; }
+        .allstar-toggle-row label { margin: 0; cursor: pointer; font-weight: 700; }
 
-        .toast-copiado { position: fixed; background: #333; color: white; padding: 6px 15px; border-radius: 20px; font-size: 11px; font-weight: 700; pointer-events: none; z-index: 9999; transform: translate(-50%, -100%); box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: toastPop 1s ease-out forwards; }
-        @keyframes toastPop { 0% { opacity: 0; transform: translate(-50%, -50%); } 20% { opacity: 1; transform: translate(-50%, -100%); } 80% { opacity: 1; transform: translate(-50%, -100%); } 100% { opacity: 0; transform: translate(-50%, -150%); } }
+        /* Estilo do Seletor de Notas */
+        .nota-selector { display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; margin-bottom: 5px; }
+        .nota-option { flex: 1; text-align: center; padding: 8px; font-size: 10px; font-weight: 800; color: #64748b; cursor: pointer; transition: 0.2s; border-radius: 9px; text-transform: uppercase; }
+        .nota-option.active { background: white; color: var(--text-dark); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body class="theme-todes">
@@ -60,6 +59,11 @@
     </header>
 
     <main class="container">
+        <div id="loadingSpinner" class="spinner-container">
+            <div class="spinner"></div>
+            <p style="font-size: 11px; font-weight: bold; color: var(--text-muted);">BUSCANDO DADOS...</p>
+        </div>
+
         <div class="bottom-actions">
             <button id="btnOpenImport" class="btn btn-main">+ COLAR LISTA DE JOGADORES</button>
         </div>
@@ -67,13 +71,22 @@
         <div id="areaRating" class="list-container"></div>
 
         <div class="config-row" id="areaConfigTimes" style="display:none;">
-            <select id="qtdTimes">
-                <option value="2">2 Times</option>
-                <option value="3" selected>3 Times</option>
-                <option value="4">4 Times</option>
-                <option value="5">5 Times</option>
-            </select>
-            <button id="btnGerarTimes" class="btn btn-main">MONTAR TIMES</button>
+            <label class="label-instrucao">Usar Notas de:</label>
+            <div class="nota-selector" id="notaTipoSelector">
+                <div class="nota-option active" data-tipo="notaTodes">Todes</div>
+                <div class="nota-option" data-tipo="notaElax">Elax</div>
+                <div class="nota-option" data-tipo="notaAllStars">All Stars</div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <select id="qtdTimes" style="flex: 1;">
+                    <option value="2">2 Times</option>
+                    <option value="3" selected>3 Times</option>
+                    <option value="4">4 Times</option>
+                    <option value="5">5 Times</option>
+                </select>
+                <button id="btnGerarTimes" class="btn btn-main" style="flex: 2;">MONTAR TIMES</button>
+            </div>
         </div>
 
         <div id="areaTeams"></div>
@@ -85,15 +98,15 @@
     </main>
 
     <div id="modalImport" class="modal-overlay" style="display:none;">
-    <div class="modal-content modal-import-content">
-        <h3>Importar do WhatsApp</h3>
-        <textarea id="textoTimesBulk" class="import-textarea" placeholder="1- Nome ✅ nota..."></textarea>
-        <div class="modal-buttons">
-            <button id="btnConfirmarImport" class="btn btn-main">PROCESSAR</button>
-            <button class="btn btn-sub" onclick="fecharModal('modalImport')">CANCELAR</button>
+        <div class="modal-content modal-import-content">
+            <h3>Importar do WhatsApp</h3>
+            <textarea id="textoTimesBulk" class="import-textarea" placeholder="1- Nome ✅ nota..."></textarea>
+            <div class="modal-buttons">
+                <button id="btnConfirmarImport" class="btn btn-main">PROCESSAR</button>
+                <button class="btn btn-sub" onclick="fecharModal('modalImport')">CANCELAR</button>
+            </div>
         </div>
     </div>
-</div>
 
     <script src="load-navbar.js"></script>
     <script type="module" src="times.js"></script>
