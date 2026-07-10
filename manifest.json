@@ -1,14 +1,20 @@
 {
   "name": "Lista Queeridas",
   "short_name": "Queeridas",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "/app-logo.png",
+      "src": "https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app-logo.png",
       "sizes": "420x420",
       "type": "image/png",
       "purpose": "any"
