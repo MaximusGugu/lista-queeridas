@@ -41,7 +41,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 
 /* --- HEADER --- */
 .header-compact {
-    padding: 18px 0; position: sticky; top: 0; z-index: 10;
+    padding: calc(18px + env(safe-area-inset-top)) 0 18px;
+    position: sticky; top: 0; z-index: 10;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
     position: relative;
     overflow: hidden;
