@@ -271,7 +271,6 @@ function renderBanco() {
         .sort();
     chaves.forEach((nome, index) => {
         const info = banco[nome];
-        const star = info.allStars ? ' &#11088;' : '';
         const admBadge = info.adm ? ' <span class="bank-player-badge">ADM</span>' : '';
         const nomeSeguro = escaparHtml(nome);
         const apelidosSeguros = escaparHtml(info.apelidos || "");
@@ -280,9 +279,15 @@ function renderBanco() {
         const notaAllStars = notaBanco(info, "notaAllStars", 0);
         const editId = `bank-edit-${index}`;
         const notasExibidas = [];
-        if (notaTodes > 0) notasExibidas.push({ classe: "todes", texto: `TODES: ${notaTodes}` });
-        if (notaElax > 0) notasExibidas.push({ classe: "elax", texto: `ELAX: ${notaElax}` });
-        if (info.allStars && notaAllStars > 0) notasExibidas.push({ classe: "allstars", texto: `ALL STARS: ${notaAllStars}` });
+        if ((filtroBancoAtivo === "todos" || filtroBancoAtivo === "todes") && notaTodes > 0) {
+            notasExibidas.push({ classe: "todes", texto: `TODES: ${notaTodes}` });
+        }
+        if ((filtroBancoAtivo === "todos" || filtroBancoAtivo === "elax") && notaElax > 0) {
+            notasExibidas.push({ classe: "elax", texto: `ELAX: ${notaElax}` });
+        }
+        if ((filtroBancoAtivo === "todos" || filtroBancoAtivo === "allstars") && info.allStars && notaAllStars > 0) {
+            notasExibidas.push({ classe: "allstars", texto: `ALL STARS: ${notaAllStars}` });
+        }
         const notasHtml = notasExibidas.length
             ? `<div class="bank-player-rating">${notasExibidas.map(nota => `<span class="rating-pill ${nota.classe}">${nota.texto}</span>`).join('')}</div>`
             : "";
@@ -293,7 +298,7 @@ function renderBanco() {
             <details class="bank-player-details">
                 <summary class="bank-player-summary">
                     <div class="bank-player-main">
-                        <div class="input-item btn-flex-2">${nomeSeguro}${star}${admBadge}</div>
+                        <div class="input-item btn-flex-2">${nomeSeguro}${admBadge}</div>
                         ${notasHtml}
                     </div>
                     <span class="accordion-chevron" aria-hidden="true"></span>

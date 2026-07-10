@@ -179,6 +179,63 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .theme-elax .is-adm::after { background: var(--color-elax); }
 .theme-praia .is-adm::after { background: var(--color-praia); }
 
+/* A lista principal usa linhas compactas; outros cards mantêm o visual original. */
+#listaJogadores .item-compra {
+    min-height: 34px;
+    margin-bottom: 4px;
+    padding: 3px 5px;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: none;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 9px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+#listaJogadores .item-compra.is-pago {
+    background-color: rgba(240, 253, 244, 0.72) !important;
+    border: 1px solid #bbf7d0 !important;
+}
+
+#listaJogadores .item-compra.is-adm {
+    border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+#listaJogadores .input-item {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+#listaJogadores .num {
+    width: 20px;
+    height: auto;
+    border-radius: 0;
+    background: transparent;
+    font-size: 10px;
+}
+
+#listaJogadores .check-pago {
+    width: 20px;
+    height: 20px;
+    margin-right: 2px;
+    border-width: 1.5px;
+}
+
+#listaJogadores .check-pago:checked {
+    background-size: 11px;
+}
+
+#listaJogadores .btn-del {
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+}
+
+#listaJogadores .adm-actions-placeholder {
+    width: 22px;
+    margin-right: 2px;
+}
+
 .btn-del { background: #FEE2E2; color: var(--danger); border: none; font-size: 16px; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .btn-edit { background: #E0F2FE; color: #0284C7; border: none; font-size: 14px; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .btn-invisible { opacity: 0; }
@@ -575,7 +632,20 @@ main.container { padding-bottom: 100px !important; }
 /* --- BALANCEADOR DE TIMES --- */
 .teams-page { padding-top: 15px; padding-bottom: 40px !important; }
 .bottom-actions.compact-actions { padding-bottom: 0 !important; margin-bottom: 10px; }
-#areaTeams .item-compra { padding: 4px 10px; }
+#areaTeams .item-compra {
+    min-height: 34px;
+    margin-bottom: 4px;
+    padding: 3px 5px;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: none;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 9px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+#areaTeams .item-compra .input-item { min-width: 0; overflow-wrap: anywhere; }
+#areaTeams .item-compra .level-num { min-width: 14px; font-size: 12px; }
+#areaTeams .item-compra .btn-lock { width: 22px; height: 22px; font-size: 10px; }
 .team-section { margin-bottom: 25px; }
 .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 5px; }
 .team-title { font-size: 22px; font-weight: 800; border: none; background: transparent; outline: none; width: 65%; padding: 2px 5px; transition: all 0.2s ease; border-bottom: 2px solid transparent; }
@@ -585,7 +655,19 @@ main.container { padding-bottom: 100px !important; }
 .team-total { font-size: 12px; background: var(--bg-app); padding: 4px 10px; border-radius: 10px; font-weight: bold; opacity: 0.8; }
 .team-list-drop { min-height: 50px; border-radius: 15px; }
 .config-row { display: flex; flex-direction: column; gap: 10px; margin: 15px 0; }
+#areaConfigTimes { gap: 8px; }
+#areaConfigTimes .label-instrucao { margin: 0; }
+#areaConfigTimes .nota-selector { margin-bottom: 0; }
 .config-row select { padding: 12px; border-radius: 12px; border: 1px solid #ddd; font-family: inherit; font-weight: bold; background: white; }
+#qtdTimes {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 34px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+}
 .config-actions-row { display: flex; gap: 10px; }
 .item-compra.is-locked { background-color: #f0fdf4 !important; border: 1px solid #bbf7d0 !important; }
 .btn-lock { width: 28px; height: 28px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; background: rgba(0,0,0,0.05); color: #999; }

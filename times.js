@@ -422,7 +422,7 @@ function renderTeams() {
                 ${jogadoresOrdenados.map(p => `
                     <div class="item-compra ${p.locked ? 'is-locked' : ''}" data-player-id="${p.id}">
                         <div class="drag-handle">⠿</div>
-                        <div class="input-item">${p.nome}${p.allStars ? ' ⭐' : ''}</div>
+                        <div class="input-item">${p.nome}${p.allStars && notaTipoAtiva !== 'notaAllStars' ? ' ⭐' : ''}</div>
                         <span class="level-num">${resolverNotaReal(p, notaTipoAtiva)}</span>
                         <button class="btn-lock ${p.locked ? 'locked' : ''}" onclick="window.toggleLock('${p.id}')">${p.locked ? '🔒' : '🔓'}</button>
                     </div>
