@@ -1,0 +1,9 @@
+{
+  "name": "Lista Queeridas",
+  "short_name": "Queeridas",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#ffffff"
+}
