@@ -34,7 +34,10 @@ auth.onAuthStateChanged(async (user) => {
                 render();
             } else { inicializarBancoNovo(); }
         });
-        onSnapshot(docBancoRef, (snap) => { if (snap.exists()) bancoNotas = snap.data(); });
+        onSnapshot(docBancoRef, (snap) => {
+            bancoNotas = snap.exists() ? snap.data() : {};
+            popularSelectAdm();
+        });
         inicializarEventosBotoes();
     } else {
         if (!window.location.pathname.includes("login.html")) window.location.href = "login.html";
@@ -82,11 +85,49 @@ async function inicializarBancoNovo() {
 }
 
 // --- 3. LOGICA DO MODAL DE CONFIGURAÇÃO ---
+function obterNomesAdm(valorAtual = "") {
+    const admins = Object.keys(bancoNotas)
+        .filter(nome => nome !== "versao" && bancoNotas[nome]?.adm)
+        .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    if (valorAtual && !admins.includes(valorAtual)) admins.unshift(valorAtual);
+    return admins;
+}
+
+function popularSelectAdm(valorAtual = "") {
+    const select = document.getElementById("cfgAdm");
+    if (!select) return;
+    const valorSelecionado = valorAtual || select.value || "";
+    const admins = obterNomesAdm(valorSelecionado);
+    select.innerHTML = "";
+
+    if (!admins.length) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "Nenhum ADM marcado no banco";
+        select.appendChild(option);
+        select.value = "";
+        return;
+    }
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Selecione um ADM";
+    select.appendChild(placeholder);
+
+    admins.forEach(nome => {
+        const option = document.createElement("option");
+        option.value = nome;
+        option.textContent = nome;
+        select.appendChild(option);
+    });
+    select.value = admins.includes(valorSelecionado) ? valorSelecionado : "";
+}
+
 function carregarDadosNoModal(idLista) {
     const lista = db_local.listas[idLista];
     if (!lista) return;
     const c = lista.config;
-    document.getElementById("cfgAdm").value = c.adm || "";
+    popularSelectAdm(c.adm || "");
     document.getElementById("cfgNomeJogo").value = c.nomeJogo || "";
     document.getElementById("cfgQuadra").value = c.quadra || "";
     document.getElementById("cfgMapaLink").value = c.mapaLink || "";
@@ -104,6 +145,15 @@ function carregarDadosNoModal(idLista) {
     document.getElementById("cfgTextoApoio").value = c.textoApoio || "";
 }
 
+function selecionarModalidadeConfig(idLista) {
+    const campoModalidade = document.getElementById("cfgModalidade");
+    if (campoModalidade) campoModalidade.value = idLista;
+    document.querySelectorAll('.cfg-list-option').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-id') === idLista);
+    });
+    carregarDadosNoModal(idLista);
+}
+
 // --- 4. RENDERIZAÇÃO ---
 function render() {
     const listaAtual = db_local.listas[aba_ativa];
@@ -112,7 +162,7 @@ function render() {
     document.body.className = `theme-${aba_ativa.split('_')[0].toLowerCase()}`;
     const tApp = document.getElementById("tituloApp");
     if(tApp) tApp.innerText = `LISTA ${nomeJogo.toUpperCase()}`;
-    document.querySelectorAll('.btn-cat').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-id') === aba_ativa));
+    document.querySelectorAll('.main-list-tab').forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-id') === aba_ativa));
 
     const infoPreview = document.getElementById("infoPreview");
     if (infoPreview) {
@@ -123,27 +173,30 @@ function render() {
         infoPreview.innerHTML = `
             <div class="info-card-header">
                 <div class="edit-text title" contenteditable="true" data-key="nomeJogo">${nomeJogo}</div>
-                <button id="btnCopyWhatsapp" class="copy-btn">COPIAR LISTA</button>
             </div>
             <div class="info-row">
-                📍 <span class="edit-text" contenteditable="true" data-key="quadra">${quadra}</span> | 
+                &#128205; <span class="edit-text" contenteditable="true" data-key="quadra">${quadra}</span> | 
                 <span class="edit-text" contenteditable="true" data-key="data">${data || 'dd/mm'}</span>
-                (<span class="edit-day-trigger" style="cursor:pointer; text-decoration:underline dotted;">${dia}</span>)
+                (<span class="edit-day-trigger">${dia}</span>)
             </div>
-            <div class="info-row">🕒 ${inicio} às ${fim}</div>
-            <div class="info-row">💰 ${isFree ? pix : 'R$ ' + valor + ' | Pix: ' + pix}</div>
+            <div class="info-row">&#128338; ${inicio} &agrave;s ${fim}</div>
+            <div class="info-row">&#128176; ${isFree ? pix : 'R$ ' + valor + ' | Pix: ' + pix}</div>
             
-            <div style="margin-top:15px; padding-top:10px; border-top:1px dashed #ddd; font-size:11px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                    <div style="flex:1">
-                        <b>LINK DO FORMULÁRIO:</b><br>
-                        <span style="color:var(--color-praia); word-break:break-all;">${linkPublico}</span>
-                    </div>
-                    <button id="btnCopyFormLink" class="copy-link-btn">Copiar Link 🔗</button>
+            <div class="card-actions">
+                <div class="card-actions-header">
+                    <div class="card-actions-title">A&ccedil;&otilde;es da lista</div>
+                    <span class="form-status-pill ${formAberto ? 'is-open' : 'is-closed'}">${formAberto ? '&#128275; Aberto' : '&#128274; Fechado'}</span>
                 </div>
-                <div class="form-status-control">
-                    <span>STATUS: <b style="color:${formAberto ? '#059669' : '#e11d48'}">${formAberto ? '🔓 ABERTO' : '🔒 FECHADO'}</b></span>
-                    <button id="btnToggleForm" class="status-toggle-btn ${formAberto ? 'is-open' : 'is-closed'}">${formAberto ? 'FECHAR FORMULÁRIO' : 'ABRIR FORMULÁRIO'}</button>
+                <div class="form-link-row">
+                    <div class="form-link-copy">
+                        <b>LINK DO FORMUL&Aacute;RIO:</b>
+                        <span class="form-link-url">${linkPublico}</span>
+                    </div>
+                </div>
+                <div class="card-actions-grid">
+                    <button id="btnCopyWhatsapp" class="btn btn-sub">COPIAR LISTA</button>
+                    <button id="btnCopyFormLink" class="btn btn-sub">COPIAR LINK</button>
+                    <button id="btnToggleForm" class="status-toggle-btn ${formAberto ? 'is-open' : 'is-closed'}">${formAberto ? 'FECHAR FORMUL&Aacute;RIO' : 'ABRIR FORMUL&Aacute;RIO'}</button>
                 </div>
             </div>
         `;
@@ -158,7 +211,7 @@ function renderLista(listaAtual, limite, adm) {
     listaDOM.innerHTML = "";
     const divAdm = document.createElement("div");
     divAdm.className = "item-compra is-adm";
-    divAdm.innerHTML = `<span class="num">1</span><span class="input-item" contenteditable="true">${formatarNome(adm)}</span><div style="width:26px; margin-right:5px;"></div><button class="btn-del" style="opacity:0">×</button>`;
+    divAdm.innerHTML = `<span class="num">1</span><span class="input-item" contenteditable="true">${formatarNome(adm)}</span><div class="adm-actions-placeholder"></div><button class="btn-del btn-invisible">&times;</button>`;
     divAdm.querySelector('.input-item').onblur = (e) => { listaAtual.config.adm = formatarNome(e.target.innerText.trim()); salvar(); };
     listaDOM.appendChild(divAdm);
 
@@ -180,18 +233,18 @@ function renderLista(listaAtual, limite, adm) {
             if (bFechar) { listaDOM.appendChild(bFechar); botaoInserido = true; }
             const s = document.createElement("div");
             s.className = "espera-divider";
-            s.innerText = "Lista de Espera ⏰";
+            s.innerHTML = "Lista de Espera &#9200;";
             listaDOM.appendChild(s);
         }
         const div = document.createElement("div");
         div.className = `item-compra ${pos > limite ? 'modo-espera' : ''} ${jog.pago ? 'is-pago' : ''}`;
         div.setAttribute('data-id', jog.id);
         div.innerHTML = `
-            <div class="drag-handle">⠿</div>
+            <div class="drag-handle">&#10303;</div>
             <span class="num">${pos}</span>
             <span class="input-item" contenteditable="true">${formatarNome(jog.nome)}</span>
             <input type="checkbox" class="check-pago" ${jog.pago ? 'checked' : ''}>
-            <button class="btn-del">×</button>
+            <button class="btn-del">&times;</button>
         `;
         div.querySelector(".input-item").onblur = (e) => { jog.nome = formatarNome(e.target.innerText.trim()); salvar(); };
         div.querySelector(".check-pago").onchange = (e) => { jog.pago = e.target.checked; salvar(); render(); };
@@ -206,30 +259,63 @@ function renderLista(listaAtual, limite, adm) {
 }
 
 // --- 5. FUNÇÕES DE SUPORTE ---
+function limparNomeImportado(linha) {
+    return (linha || "")
+        .replace(/^\s*\d+\s*[-.)]?\s*/, "")
+        .replace(/[\u2705\u2713\u2714\u2611\uFE0E\uFE0F]/g, "")
+        .replace(/[\u200B-\u200D]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
 function formatarNome(n) { return n ? n.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ""; }
 
 function encontrarFuzzyMatch(nomeImportado, banco) {
-    const normalizar = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const normalizar = (str) => (str || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u200B-\u200D\uFE0E\uFE0F]/g, "")
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
     const nomeLimp = normalizar(nomeImportado);
     if (!nomeLimp) return null;
-    const chaves = Object.keys(banco);
+    const chaves = Object.keys(banco).filter(k => k !== "versao");
     for (let nomeOficial of chaves) {
-        const info = banco[nomeOficial];
+        const info = banco[nomeOficial] || {};
         if (normalizar(nomeOficial) === nomeLimp) return nomeOficial;
         if (info.apelidos && info.apelidos.split(',').map(a => normalizar(a)).includes(nomeLimp)) return nomeOficial;
     }
     const candidatos = chaves.filter(nomeOficial => {
-        const info = banco[nomeOficial];
+        const info = banco[nomeOficial] || {};
         const textoBusca = normalizar(nomeOficial + " " + (info.apelidos || ""));
-        return normalizar(nomeImportado).split(/\s+/).every(palavra => textoBusca.includes(palavra));
+        return nomeLimp.split(/\s+/).every(palavra => textoBusca.includes(palavra));
     });
     return candidatos.length === 1 ? candidatos[0] : null;
 }
 
 function processarLinhaImportada(l) {
-    const p = l.includes('✅');
-    const n = l.replace(/^\d+[\s.-]*/, '').replace(/[✅]/g, '').trim();
+    const p = /[\u2705\u2713\u2714\u2611]/.test(l);
+    const n = limparNomeImportado(l);
     return { id: "p-"+Date.now()+Math.random(), nome: formatarNome(n), pago: p };
+}
+
+function calcularQuantidadeTimesSugerida(totalJogadores) {
+    if (totalJogadores <= 0) return 2;
+    return Math.max(2, Math.min(5, Math.round(totalJogadores / 7)));
+}
+
+function notaBanco(info, campo, padrao = 3) {
+    if (info && info[campo] !== undefined && info[campo] !== null && info[campo] !== "") {
+        const numero = Number(info[campo]);
+        return Number.isFinite(numero) ? numero : padrao;
+    }
+    if (campo === "notaTodes" && info?.level !== undefined && info?.level !== null && info?.level !== "") {
+        const numero = Number(info.level);
+        return Number.isFinite(numero) ? numero : padrao;
+    }
+    return padrao;
 }
 
 function criarJogadoresVaziosParaLista(idLista) {
@@ -297,9 +383,9 @@ async function fecharListaEMontarTimes(listaAtual) {
             return { 
                 nome: match, 
                 // Buscamos as notas REAIS do banco agora para enviar a foto correta
-                notaTodes: Number(info.notaTodes || info.level || 3),
-                notaElax: Number(info.notaElax || 3),
-                notaAllStars: Number(info.notaAllStars || 0),
+                notaTodes: notaBanco(info, "notaTodes"),
+                notaElax: notaBanco(info, "notaElax"),
+                notaAllStars: notaBanco(info, "notaAllStars", 0),
                 allStars: !!info.allStars, 
                 locked: false 
             };
@@ -318,14 +404,16 @@ async function fecharListaEMontarTimes(listaAtual) {
         teams: [], 
         fase: "rating", 
         timestamp: Date.now(),
-        notaTipoAtiva: notaAtivaSugerida 
+        notaTipoAtiva: notaAtivaSugerida,
+        qtdTimesSugerida: calcularQuantidadeTimesSugerida(pagantes.length),
+        autoMontarTimes: true
     });
     window.location.href = "times.html";
 }
 
 // --- 6. EVENTOS DE BOTÕES ---
 function inicializarEventosBotoes() {
-    document.querySelectorAll('.btn-cat').forEach(btn => {
+    document.querySelectorAll('.main-list-tab').forEach(btn => {
         btn.onclick = async () => {
             aba_ativa = btn.getAttribute('data-id');
             localStorage.setItem("queeridas_aba_ativa", aba_ativa);
@@ -334,12 +422,12 @@ function inicializarEventosBotoes() {
     });
     const bCfg = document.getElementById("btnConfig");
     if(bCfg) bCfg.onclick = () => {
-        document.getElementById("cfgModalidade").value = aba_ativa;
-        carregarDadosNoModal(aba_ativa);
+        selecionarModalidadeConfig(aba_ativa);
         window.abrirModal('modalConfig');
     };
-    const selModalidade = document.getElementById("cfgModalidade");
-    if(selModalidade) selModalidade.onchange = (e) => carregarDadosNoModal(e.target.value);
+    document.querySelectorAll('.cfg-list-option').forEach(btn => {
+        btn.onclick = () => selecionarModalidadeConfig(btn.getAttribute('data-id'));
+    });
     const selDia = document.getElementById("cfgDia");
     if(selDia) selDia.onchange = (e) => { document.getElementById("cfgData").value = calcularProximaData(e.target.value); };
 
@@ -391,7 +479,15 @@ function vincularEventosResumo(listaAtual) {
         const c = listaAtual.config;
         const isFree = c.pix.includes("FREE");
         let texto = `*${c.nomeJogo}*\n📍 ${c.quadra.toUpperCase()} | ${c.data} (${c.dia}) | ${c.inicio} às ${c.fim}\n💰 ${isFree ? '' : 'R$' + c.valor} (${c.limite} pessoas) | ${isFree ? c.pix : 'Pix: ' + c.pix}\n\n1 - ${formatarNome(c.adm)} ✅\n`;
-        listaAtual.jogadores.forEach((j, i) => { texto += `${i + 2} - ${formatarNome(j.nome)}${j.pago ? ' ✅' : ''}\n`; });
+        let separadorEsperaInserido = false;
+        listaAtual.jogadores.forEach((j, i) => {
+            const posicao = i + 2;
+            if (posicao === Number(c.limite) + 1 && !separadorEsperaInserido) {
+                texto += `\n*LISTA DE ESPERA ⏰*\n`;
+                separadorEsperaInserido = true;
+            }
+            texto += `${posicao} - ${formatarNome(j.nome)}${j.pago ? ' ✅' : ''}\n`;
+        });
         navigator.clipboard.writeText(texto).then(() => mostrarToast(e.clientX, e.clientY));
     };
     const btnToggleForm = document.getElementById("btnToggleForm");

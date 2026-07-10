@@ -1,4 +1,4 @@
-import { db, doc, setDoc, onSnapshot, auth } from "./firebase-config.js";
+﻿import { db, doc, setDoc, onSnapshot, auth } from "./firebase-config.js";
 
 // --- 1. FUNÇÕES DE SUPORTE E MODAIS ---
 window.abrirModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "flex"; };
@@ -8,6 +8,73 @@ window.fecharModal = (id) => { const el = document.getElementById(id); if (el) e
 function formatarNome(n) { 
     if (!n) return "";
     return n.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); 
+}
+
+function limparNomeImportado(linha) {
+    return (linha || "")
+        .replace(/^\s*\d+\s*[-.)]?\s*/, "")
+        .replace(/[\u2705\u2713\u2714\u2611\uFE0E\uFE0F]/g, "")
+        .replace(/[\u200B-\u200D]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function normalizarBusca(str) {
+    return (str || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[\u200B-\u200D\uFE0E\uFE0F]/g, "")
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function encontrarJogadorBanco(nomeDigitado) {
+    const nomeLimp = normalizarBusca(nomeDigitado);
+    if (!nomeLimp) return null;
+    const chaves = Object.keys(bancoPermanente).filter(k => k !== "versao");
+
+    for (const nomeOficial of chaves) {
+        const info = bancoPermanente[nomeOficial] || {};
+        if (normalizarBusca(nomeOficial) === nomeLimp) return nomeOficial;
+        const apelidos = (info.apelidos || "").split(",").map(a => normalizarBusca(a));
+        if (apelidos.includes(nomeLimp)) return nomeOficial;
+    }
+
+    const candidatos = chaves.filter(nomeOficial => {
+        const info = bancoPermanente[nomeOficial] || {};
+        const textoBusca = normalizarBusca(`${nomeOficial} ${info.apelidos || ""}`);
+        return nomeLimp.split(/\s+/).every(palavra => textoBusca.includes(palavra));
+    });
+    return candidatos.length === 1 ? candidatos[0] : null;
+}
+
+function notaOuPadrao(valor, padrao = 3) {
+    if (valor === undefined || valor === null || valor === "") return padrao;
+    const numero = Number(valor);
+    return Number.isFinite(numero) ? numero : padrao;
+}
+
+function notaBanco(info, campo, padrao = 3) {
+    if (info && info[campo] !== undefined && info[campo] !== null && info[campo] !== "") {
+        return notaOuPadrao(info[campo], padrao);
+    }
+    if (campo === "notaTodes" && info?.level !== undefined && info?.level !== null && info?.level !== "") {
+        return notaOuPadrao(info.level, padrao);
+    }
+    return padrao;
+}
+
+function calcularQuantidadeTimesSugerida(totalJogadores) {
+    if (totalJogadores <= 0) return 2;
+    return Math.max(2, Math.min(5, Math.round(totalJogadores / 7)));
+}
+
+function aplicarQuantidadeTimesSugerida() {
+    const select = document.getElementById("qtdTimes");
+    if (!select) return;
+    select.value = String(qtdTimesSugerida || calcularQuantidadeTimesSugerida(players.length));
 }
 
 const docTimesRef = doc(db, "sistema", "montador_times");
@@ -20,17 +87,20 @@ let bancoPermanente = {};
 let vinculosTemporarios = {}; 
 let modosPendentes = {};
 let notaTipoAtiva = "notaTodes"; 
+let qtdTimesSugerida = 3;
+let autoMontarTimes = false;
 
 // --- FUNÇÃO CRÍTICA: RESOLVER NOTA ATUALIZADA DO BANCO ---
 // Esta função garante que o balanceador sempre use a nota mais recente do Banco de Dados
 function resolverNotaReal(p, tipoNota) {
-    const doBanco = bancoPermanente[p.nome];
+    const nomeOficial = encontrarJogadorBanco(p.nome) || p.nome;
+    const doBanco = bancoPermanente[nomeOficial];
     if (doBanco) {
         // Prioriza nota do banco permanente
-        return Number(doBanco[tipoNota] || doBanco.level || 3);
+        return notaBanco(doBanco, tipoNota);
     }
     // Fallback para nota da sessão (jogadores novos ainda não salvos no banco)
-    return Number(p[tipoNota] || p.level || 3);
+    return notaBanco(p, tipoNota);
 }
 
 // --- 2. SINCRONIZAÇÃO EM TEMPO REAL ---
@@ -42,6 +112,39 @@ function ordenarJogadoresTime(jogadores) {
     });
 }
 
+async function montarTimes(nTeams, automatico = false) {
+    qtdTimesSugerida = nTeams || calcularQuantidadeTimesSugerida(players.length);
+    let todos = (teams.length > 0 && !automatico) ? teams.flatMap(t => t.players) : [...players];
+    if (!todos.length) return;
+    let nTA = Array.from({ length: qtdTimesSugerida }, (_, i) => ({ id: i, nome: (teams[i] && teams[i].nome && !automatico) ? teams[i].nome : `Time ${i + 1}`, players: [] }));
+    let livres = [];
+    todos.forEach(p => {
+        if (p.locked) {
+            const tOrig = teams.find(t => t.players.some(tp => tp.id === p.id));
+            if (!automatico && tOrig && tOrig.id < qtdTimesSugerida) nTA[tOrig.id].players.push(p);
+            else { p.locked = false; livres.push(p); }
+        } else livres.push(p);
+    });
+    livres.sort((a, b) => resolverNotaReal(b, notaTipoAtiva) - resolverNotaReal(a, notaTipoAtiva));
+    livres.forEach(p => {
+        nTA.sort((a, b) => a.players.reduce((s, x) => s + resolverNotaReal(x, notaTipoAtiva), 0) - b.players.reduce((s, x) => s + resolverNotaReal(x, notaTipoAtiva), 0));
+        nTA[0].players.push(p);
+    });
+    teams = nTA.map(t => ({ ...t, players: ordenarJogadoresTime(t.players) })).sort((a, b) => a.id - b.id);
+    fase = "teams";
+    autoMontarTimes = false;
+    await salvarFirebase();
+}
+
+async function montarAutomaticamenteSePronto() {
+    const pendentes = players.filter(p => !encontrarJogadorBanco(p.nome));
+    if (autoMontarTimes && players.length > 0 && teams.length === 0 && pendentes.length === 0) {
+        await montarTimes(qtdTimesSugerida || calcularQuantidadeTimesSugerida(players.length), true);
+        return true;
+    }
+    return false;
+}
+
 auth.onAuthStateChanged((user) => {
     if (user) {
         onSnapshot(docBancoRef, (snap) => { 
@@ -51,16 +154,19 @@ auth.onAuthStateChanged((user) => {
                 atualizarUI();
             }
             
-            onSnapshot(docTimesRef, (snapTimes) => {
+            onSnapshot(docTimesRef, async (snapTimes) => {
                 if (snapTimes.exists()) { 
                     const d = snapTimes.data(); 
                     players = d.players || []; 
                     teams = d.teams || []; 
                     fase = d.fase || "rating"; 
                     notaTipoAtiva = d.notaTipoAtiva || "notaTodes";
+                    qtdTimesSugerida = d.qtdTimesSugerida || calcularQuantidadeTimesSugerida(players.length);
+                    autoMontarTimes = !!d.autoMontarTimes;
                 } 
                 const spinner = document.getElementById("loadingSpinner");
                 if(spinner) spinner.style.display = "none";
+                if (await montarAutomaticamenteSePronto()) return;
                 atualizarUI();
             });
         });
@@ -71,7 +177,7 @@ auth.onAuthStateChanged((user) => {
 async function salvarFirebase() { 
     if (!auth.currentUser) return;
     try {
-        await setDoc(docTimesRef, { players, teams, fase, notaTipoAtiva }); 
+        await setDoc(docTimesRef, { players, teams, fase, notaTipoAtiva, qtdTimesSugerida, autoMontarTimes }); 
     } catch (error) {
         console.error("Erro ao salvar no Firebase:", error);
     }
@@ -91,7 +197,7 @@ function atualizarUI() {
         return;
     }
 
-    const pendentes = players.filter(p => !bancoPermanente[p.nome]);
+    const pendentes = players.filter(p => !encontrarJogadorBanco(p.nome));
 
     if (pendentes.length > 0 && fase === "rating") {
         aR.style.display = "block"; aC.style.display = "none"; aT.style.display = "none"; aA.style.display = "none";
@@ -101,6 +207,7 @@ function atualizarUI() {
         document.querySelectorAll('.nota-option').forEach(opt => {
             opt.classList.toggle('active', opt.dataset.tipo === notaTipoAtiva);
         });
+        aplicarQuantidadeTimesSugerida();
         if (fase === "teams" && teams.length > 0) { aT.style.display = "block"; renderTeams(); }
         else { aT.style.display = "none"; }
     }
@@ -113,24 +220,23 @@ function renderRatingList(pendentes) {
     
     pendentes.forEach(p => {
         const div = document.createElement("div");
-        div.className = "item-compra item-rating-pendente";
+        div.className = "item-compra item-rating-pendente player-rating-card";
         div.id = `card-${p.id}`;
-        div.style.flexDirection = "column"; div.style.alignItems = "stretch"; div.style.padding = "15px"; div.style.gap = "12px";
         
         const nomeVinculado = vinculosTemporarios[p.id];
         const modoAtual = modosPendentes[p.id] || "novo";
 
         let htmlInterno = `
             <div class="row-between">
-                <span style="font-weight:bold; font-size: 16px;">${p.nome}</span>
-                <span style="font-size: 11px; color: #94a3b8; font-weight: 600;">${nomeVinculado ? 'vinculado' : 'Sem vínculo'}</span>
+                <span class="pending-player-name">${p.nome}</span>
+                <span class="pending-player-status">${nomeVinculado ? 'vinculado' : 'Sem vínculo'}</span>
             </div>
-            <div style="display:flex; gap:16px; align-items:center; font-size:12px; color:var(--text-muted);">
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <div class="link-mode-row">
+                <label class="radio-label">
                     <input type="radio" name="modo-${p.id}" ${modoAtual === "novo" ? "checked" : ""} onchange="window.setModoPendente('${p.id}', 'novo')">
                     Novo cadastro
                 </label>
-                <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                <label class="radio-label">
                     <input type="radio" name="modo-${p.id}" ${modoAtual === "vincular" ? "checked" : ""} onchange="window.setModoPendente('${p.id}', 'vincular')">
                     Vincular
                 </label>
@@ -139,17 +245,17 @@ function renderRatingList(pendentes) {
 
         if (nomeVinculado) {
             htmlInterno += `
-                <div style="background: #ecfdf5; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; text-align: center;">
-                    <div style="color: #047857; font-weight: 800; font-size: 13px;">✅ VINCULANDO A: ${nomeVinculado}</div>
-                    <button onclick="window.cancelarVinculo('${p.id}')" style="background:none; border:none; color:#999; font-size:10px; text-decoration:underline; cursor:pointer; margin-top:5px;">Desfazer vínculo</button>
+                <div class="linked-card">
+                    <div class="linked-card-title">✅ VINCULANDO A: ${nomeVinculado}</div>
+                    <button onclick="window.cancelarVinculo('${p.id}')" class="btn-link-subtle mt-10">Desfazer vínculo</button>
                 </div>
             `;
         } else if (modoAtual === "vincular") {
             htmlInterno += `
-                <div class="vincular-container" id="vinc-cont-${p.id}" style="background: rgba(0,0,0,0.03); padding: 10px; border-radius: 8px;">
-                    <label style="font-size: 10px; font-weight: bold; color: var(--text-muted); display: block; margin-bottom: 5px;">BUSCAR NO BANCO PARA VINCULAR:</label>
-                    <input type="text" class="input-modal" style="margin-bottom: 0; flex: 1; font-size: 13px; padding: 10px; border: 1px solid #ddd;" placeholder="Digite o nome correto aqui..." oninput="window.buscarParaVincular('${p.id}', this.value)">
-                    <div id="results-${p.id}" class="vincular-results" style="margin-top: 5px; max-height: 150px; overflow-y: auto; display: none; border: 1px solid #ddd; border-radius: 6px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1);"></div>
+                <div class="vincular-container" id="vinc-cont-${p.id}">
+                    <label class="vincular-label">BUSCAR NO BANCO PARA VINCULAR:</label>
+                    <input type="text" class="input-modal vincular-input" placeholder="Digite o nome correto aqui..." oninput="window.buscarParaVincular('${p.id}', this.value)">
+                    <div id="results-${p.id}" class="vincular-results"></div>
                 </div>
             `;
         } else {
@@ -158,21 +264,21 @@ function renderRatingList(pendentes) {
                     <div class="rating-field"><label>TODES</label>
                         <div class="qty-controls rating-stepper">
                             <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaTodes', -1)">-</button>
-                            <span class="level-num" id="ntodes-${p.id}">${p.notaTodes || 3}</span>
+                            <span class="level-num" id="ntodes-${p.id}">${notaBanco(p, "notaTodes")}</span>
                             <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaTodes', 1)">+</button>
                         </div>
                     </div>
                     <div class="rating-field"><label>ELAX</label>
                         <div class="qty-controls rating-stepper">
                             <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaElax', -1)">-</button>
-                            <span class="level-num" id="nelax-${p.id}">${p.notaElax || 3}</span>
+                            <span class="level-num" id="nelax-${p.id}">${notaBanco(p, "notaElax")}</span>
                             <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaElax', 1)">+</button>
                         </div>
                     </div>
                     <div class="rating-field allstar-rating-field" id="allstar-rating-${p.id}" style="${p.allStars ? '' : 'display:none;'}"><label>ALL STARS</label>
                         <div class="qty-controls rating-stepper">
                             <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaAllStars', -1)">-</button>
-                            <span class="level-num" id="nstar-${p.id}">${p.notaAllStars || 3}</span>
+                            <span class="level-num" id="nstar-${p.id}">${notaBanco(p, "notaAllStars")}</span>
                             <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaAllStars', 1)">+</button>
                         </div>
                     </div>
@@ -187,7 +293,7 @@ function renderRatingList(pendentes) {
     });
 
     const b = document.createElement("button");
-    b.className = "btn btn-main"; b.style.marginTop = "15px"; b.innerText = "CONCLUIR E MONTAR TIMES";
+    b.className = "btn btn-main btn-concluir-times"; b.innerText = "CONCLUIR E MONTAR TIMES";
     b.onclick = () => window.cadastrarNovosEContinuar();
     cont.appendChild(b);
 }
@@ -199,9 +305,9 @@ window.setModoPendente = (playerId, modo) => {
         delete vinculosTemporarios[playerId];
         const p = players.find(x => x.id === playerId);
         if (p) {
-            p.notaTodes = p.notaTodes || 3;
-            p.notaElax = p.notaElax || 3;
-            p.notaAllStars = p.notaAllStars || 3;
+            p.notaTodes = notaBanco(p, "notaTodes");
+            p.notaElax = notaBanco(p, "notaElax");
+            p.notaAllStars = notaBanco(p, "notaAllStars");
         }
     }
     atualizarUI();
@@ -210,8 +316,8 @@ window.setModoPendente = (playerId, modo) => {
 window.changePlayerNotaLocal = (playerId, tipo, delta) => {
     const p = players.find(x => x.id === playerId);
     if (p) {
-        if (!p[tipo]) p[tipo] = 3;
-        p[tipo] = Math.max(1, Math.min(10, p[tipo] + delta));
+        if (p[tipo] === undefined || p[tipo] === null || p[tipo] === "") p[tipo] = 3;
+        p[tipo] = Math.max(0, Math.min(10, Number(p[tipo]) + delta));
         const idMap = { 'notaTodes': 'ntodes', 'notaElax': 'nelax', 'notaAllStars': 'nstar' };
         const el = document.getElementById(`${idMap[tipo]}-${playerId}`);
         if(el) el.innerText = p[tipo];
@@ -222,7 +328,7 @@ window.setNewAllStarStatus = (id, v) => {
     const p = players.find(x => x.id === id);
     if (p) {
         p.allStars = v;
-        if (v && !p.notaAllStars) p.notaAllStars = 3;
+        if (v && (p.notaAllStars === undefined || p.notaAllStars === null || p.notaAllStars === "")) p.notaAllStars = 3;
         const campo = document.getElementById(`allstar-rating-${id}`);
         if (campo) campo.style.display = v ? "" : "none";
     }
@@ -231,15 +337,18 @@ window.setNewAllStarStatus = (id, v) => {
 window.buscarParaVincular = (playerId, query) => {
     const resultsDiv = document.getElementById(`results-${playerId}`);
     if (!query || query.length < 2) { resultsDiv.style.display = "none"; return; }
-    const q = query.toLowerCase();
-    const matches = Object.keys(bancoPermanente).filter(nome => nome.toLowerCase().includes(q) || (bancoPermanente[nome].apelidos || "").toLowerCase().includes(q)).slice(0, 5);
+    const q = normalizarBusca(query);
+    const matches = Object.keys(bancoPermanente)
+        .filter(nome => nome !== "versao")
+        .filter(nome => normalizarBusca(`${nome} ${bancoPermanente[nome].apelidos || ""}`).includes(q))
+        .slice(0, 5);
     if (matches.length > 0) {
         resultsDiv.style.display = "block";
         resultsDiv.innerHTML = matches.map(m => `
-            <div class="result-item" style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; align-items: center; background: white;"
+            <div class="result-item"
                  onclick="window.setVinculoLocal('${playerId}', '${m.replace(/'/g, "\\'")}')">
-                <span style="font-weight: 500;">${m} <small style="color: #999;">(T: ${bancoPermanente[m].notaTodes || bancoPermanente[m].level || 3})</small></span>
-                <span style="color: #059669; font-weight: 800; font-size: 10px;">SELECIONAR</span>
+                <span class="result-name">${m} <small class="result-note">(T: ${notaBanco(bancoPermanente[m], "notaTodes")})</small></span>
+                <span class="result-action">SELECIONAR</span>
             </div>
         `).join('');
     } else { resultsDiv.style.display = "none"; }
@@ -249,7 +358,7 @@ window.setVinculoLocal = (playerId, nomeOficial) => { vinculosTemporarios[player
 window.cancelarVinculo = (playerId) => { delete vinculosTemporarios[playerId]; atualizarUI(); };
 
 window.cadastrarNovosEContinuar = async () => {
-    const pendentes = players.filter(p => !bancoPermanente[p.nome]);
+    const pendentes = players.filter(p => !encontrarJogadorBanco(p.nome));
     const vinculosSemSelecao = pendentes.filter(p => (modosPendentes[p.id] || "novo") === "vincular" && !vinculosTemporarios[p.id]);
     if (vinculosSemSelecao.length > 0) {
         alert("Selecione um jogador do banco para todos que estiverem marcados como vincular.");
@@ -268,9 +377,9 @@ window.cadastrarNovosEContinuar = async () => {
             }
             p.nome = nomeOficial;
         } else {
-            p.notaTodes = p.notaTodes || 3;
-            p.notaElax = p.notaElax || 3;
-            p.notaAllStars = p.notaAllStars || 0;
+            p.notaTodes = notaBanco(p, "notaTodes");
+            p.notaElax = notaBanco(p, "notaElax");
+            p.notaAllStars = notaBanco(p, "notaAllStars", 0);
             p.allStars = !!p.allStars;
             bancoPermanente[p.nome] = {
                 notaTodes: p.notaTodes,
@@ -283,7 +392,9 @@ window.cadastrarNovosEContinuar = async () => {
         }
     });
     if (houveAlteracaoNoBanco) await setDoc(docBancoRef, bancoPermanente);
-    vinculosTemporarios = {}; modosPendentes = {}; fase = "teams"; await salvarFirebase();
+    vinculosTemporarios = {};
+    modosPendentes = {};
+    await montarTimes(qtdTimesSugerida || calcularQuantidadeTimesSugerida(players.length), true);
 };
 
 // --- 6. RENDERIZAÇÃO DOS TIMES ---
@@ -369,43 +480,27 @@ function inicializarEventosTimes() {
             const texto = document.getElementById("textoTimesBulk").value.trim();
             if (!texto) return;
             players = texto.split('\n').map(linha => {
-                const nomeLimpo = linha.replace(/^\d+[\s.-]*/, '').replace(/[✅|✅️]/g, '').trim();
+                const nomeLimpo = limparNomeImportado(linha);
                 const nFormatado = formatarNome(nomeLimpo);
-                let m = Object.keys(bancoPermanente).find(k => k.toLowerCase() === nFormatado.toLowerCase() || (bancoPermanente[k].apelidos || "").toLowerCase().split(',').map(s=>s.trim()).includes(nFormatado.toLowerCase()));
+                let m = encontrarJogadorBanco(nFormatado);
                 const dbP = m ? bancoPermanente[m] : null;
                 return {
                     id: "p-" + Math.random().toString(36).substr(2, 9),
                     nome: m || nFormatado,
-                    notaTodes: dbP ? (dbP.notaTodes || dbP.level || 3) : 3,
-                    notaElax: dbP ? (dbP.notaElax || 3) : 3,
-                    notaAllStars: dbP ? (dbP.notaAllStars || 0) : 0,
+                    notaTodes: dbP ? notaBanco(dbP, "notaTodes") : 3,
+                    notaElax: dbP ? notaBanco(dbP, "notaElax") : 3,
+                    notaAllStars: dbP ? notaBanco(dbP, "notaAllStars", 0) : 0,
                     allStars: dbP ? !!dbP.allStars : false,
                     locked: false
                 };
             }).filter(p => p.nome.length > 1);
+            qtdTimesSugerida = calcularQuantidadeTimesSugerida(players.length);
             teams = []; fase = "rating"; await salvarFirebase(); window.fecharModal('modalImport');
         };
     }
     document.getElementById("btnGerarTimes").onclick = async () => {
         const nTeams = parseInt(document.getElementById("qtdTimes").value);
-        let todos = (teams.length > 0) ? teams.flatMap(t => t.players) : [...players];
-        if (!todos.length) return;
-        let nTA = Array.from({ length: nTeams }, (_, i) => ({ id: i, nome: (teams[i] && teams[i].nome) ? teams[i].nome : `Time ${i + 1}`, players: [] }));
-        let livres = [];
-        todos.forEach(p => {
-            if (p.locked) {
-                const tOrig = teams.find(t => t.players.some(tp => tp.id === p.id));
-                if (tOrig && tOrig.id < nTeams) nTA[tOrig.id].players.push(p);
-                else { p.locked = false; livres.push(p); }
-            } else livres.push(p);
-        });
-        livres.sort((a, b) => resolverNotaReal(b, notaTipoAtiva) - resolverNotaReal(a, notaTipoAtiva));
-        livres.forEach(p => {
-            nTA.sort((a, b) => a.players.reduce((s, x) => s + resolverNotaReal(x, notaTipoAtiva), 0) - b.players.reduce((s, x) => s + resolverNotaReal(x, notaTipoAtiva), 0));
-            nTA[0].players.push(p);
-        });
-        teams = nTA.map(t => ({ ...t, players: ordenarJogadoresTime(t.players) })).sort((a, b) => a.id - b.id);
-        fase = "teams"; await salvarFirebase();
+        await montarTimes(nTeams, false);
     };
     document.getElementById("btnLimpar").onclick = async () => { if(confirm("Limpar?")) { players = []; teams = []; fase = "rating"; await salvarFirebase(); }};
     document.getElementById("btnCopyTimes").onclick = () => {
@@ -432,10 +527,7 @@ function mostrarToastMover(x, y, texto) {
     const toast = document.createElement('div');
     toast.className = 'toast-copiado';
     toast.innerText = texto;
-    toast.style.position = 'fixed';
     toast.style.left = `${x}px`; toast.style.top = `${y}px`;
-    toast.style.zIndex = '10000';
-    toast.style.backgroundColor = 'rgba(0,0,0,0.8)';
     document.body.appendChild(toast);
     setTimeout(() => { if(toast) toast.remove(); }, 1500);
 }

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -6,36 +6,8 @@
     <title>Inscrição - Queeridas Volleyball</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <style>
-        body { background-color: #f1f5f9; padding: 15px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
-        .form-container { width: 100%; max-width: 550px; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-        .banner { width: 100%; height: auto; display: block; border-bottom: 8px solid var(--color-allstars); }
-        .header-info { padding: 30px 25px 20px 25px; }
-        .header-info h1 { font-size: 24px; color: #1e293b; margin-bottom: 20px; font-weight: 700; line-height: 1.2; }
-        .grid-info { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 18px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #edf2f7; margin-bottom: 25px; align-items: start; }
-        .info-item { min-width: 0; font-size: 13px; color: #475569; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-        .info-label { display: flex; align-items: flex-start; gap: 8px; font-weight: 500; min-width: 0; }
-        .info-label span { min-width: 0; overflow-wrap: anywhere; }
-        .maps-link { font-size: 11px; color: var(--color-praia); text-decoration: underline; margin-left: 22px; font-weight: bold; }
-        .payment-info { line-height: 1.35; }
-        .form-body { padding: 0 25px 30px 25px; }
-        .campo { margin-bottom: 20px; }
-        .campo label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px; text-transform: uppercase; }
-        .input-text { width: 100%; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 8px; font-family: inherit; font-size: 15px; transition: all 0.2s; }
-        .input-text:focus { border-color: var(--color-praia); outline: none; background: #f0f9ff; }
-        .btn-enviar { width: 100%; padding: 16px; background: var(--color-praia); color: white; border: none; border-radius: 8px; font-weight: 800; font-size: 16px; cursor: pointer; transition: transform 0.2s; }
-        .btn-enviar:active { transform: scale(0.98); }
-        .btn-enviar:disabled { background: #cbd5e1; cursor: not-allowed; }
-        .footer-text { margin-top: 25px; font-size: 13px; color: #64748b; line-height: 1.6; white-space: pre-wrap; }
-        #sucesso { display: none; padding: 60px 25px; text-align: center; }
-        .status-tag { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px; }
-        .tag-aberto { background: #dcfce7; color: #166534; }
-        .tag-fechado { background: #fee2e2; color: #991b1b; }
-        .closed-message { display: none; margin: 0 25px 26px 25px; padding: 16px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; color: #9a3412; font-size: 14px; line-height: 1.55; }
-        .closed-message a { color: #0369a1; font-weight: 800; text-decoration: underline; }
-    </style>
 </head>
-<body>
+<body class="public-form-page">
     <div class="form-container">
         <img src="https://i.imgur.com/8QO9NeE.png" alt="Banner Queeridas" class="banner" id="imgBanner">
         
@@ -81,11 +53,11 @@
             </div>
         </div>
 
-        <div id="sucesso">
-            <div style="font-size: 60px; margin-bottom: 20px;">✅</div>
-            <h2 style="color: #0f172a; margin-bottom: 10px;">Inscrição Confirmada!</h2>
-            <p style="color: #64748b;">Agradecemos sua inscrição 💖 <br> Aguarde pelo lançamento da lista no grupo.</p>
-            <button onclick="location.reload()" style="margin-top: 30px; background: none; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 8px; cursor: pointer;">Fazer outra inscrição</button>
+        <div id="sucesso" class="success-screen">
+            <div class="success-icon">✅</div>
+            <h2 class="success-title">Inscrição Confirmada!</h2>
+            <p class="success-text">Agradecemos sua inscrição 💖 <br> Aguarde pelo lançamento da lista no grupo.</p>
+            <button onclick="location.reload()" class="btn-link-subtle mt-30">Fazer outra inscrição</button>
         </div>
     </div>
 

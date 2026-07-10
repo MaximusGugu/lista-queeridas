@@ -19,29 +19,30 @@
 
     <main class="container">
         <nav class="nav-categorias" id="menuCategorias">
-            <button class="btn-cat" data-id="TODES_QUARTA">QUARTA 🏳️‍🌈</button>
-            <button class="btn-cat" data-id="TODES_SEXTA">SEXTA 🏳️‍🌈</button>
-            <button class="btn-cat" data-id="ALLSTARS_QUARTA">QUARTA ⭐</button>
-            <button class="btn-cat" data-id="ALLSTARS_SABADO">SÁBADO ⭐</button>
-            <button class="btn-cat" data-id="ELAX_QUINTA">ELAX ✨</button>
-            <button class="btn-cat" data-id="PRAIA_DOMINGO">PRAIA ☀️</button>
+            <button class="btn-cat main-list-tab" data-id="TODES_QUARTA">QUARTA 🏳️‍🌈</button>
+            <button class="btn-cat main-list-tab" data-id="TODES_SEXTA">SEXTA 🏳️‍🌈</button>
+            <button class="btn-cat main-list-tab" data-id="ALLSTARS_QUARTA">QUARTA ⭐</button>
+            <button class="btn-cat main-list-tab" data-id="ALLSTARS_SABADO">SÁBADO ⭐</button>
+            <button class="btn-cat main-list-tab" data-id="ELAX_QUINTA">ELAX ✨</button>
+            <button class="btn-cat main-list-tab" data-id="PRAIA_DOMINGO">PRAIA ☀️</button>
         </nav>
 
         <div id="infoPreview" class="info-card"></div>
 
+        <div class="action-bar action-bar-primary">
+            <button id="btnOpenImport" class="btn btn-main">+ ADICIONAR LISTA</button>
+        </div>
+
         <!-- Spinner de Carregamento para a Lista -->
         <div id="loadingSpinner" class="spinner-container">
             <div class="spinner"></div>
-            <p style="font-size: 11px; font-weight: bold; color: var(--text-muted);">BUSCANDO LISTA...</p>
+            <p class="loading-text">BUSCANDO LISTA...</p>
         </div>
 
         <div id="listaJogadores" class="list-container"></div>
         
-        <div class="bottom-actions">
-            <button id="btnOpenImport" class="btn btn-main">+ ADICIONAR LISTA</button>
-            <div class="row-gap">
-                <button id="btnClearAll" class="btn btn-sub danger">LIMPAR TUDO</button>
-            </div>
+        <div class="action-bar-footer danger-zone">
+            <button id="btnClearAll" class="btn btn-sub danger">LIMPAR TUDO</button>
         </div>
     </main>
 
@@ -53,14 +54,15 @@
             <!-- 1. SELETOR DE MODALIDADE NO TOPO PARA EVITAR CONFLITOS -->
             <div class="campo-modal">
                 <label>Selecione a Lista que deseja editar:</label>
-                <select id="cfgModalidade" class="input-modal modal-primary-select">
-                    <option value="TODES_QUARTA">TODES (Quarta-feira)</option>
-                    <option value="TODES_SEXTA">TODES (Sexta-feira)</option>
-                    <option value="ALLSTARS_QUARTA">ALL STARS (Quarta-feira)</option>
-                    <option value="ALLSTARS_SABADO">ALL STARS (Sábado)</option>
-                    <option value="ELAX_QUINTA">ELAX (Quinta-feira)</option>
-                    <option value="PRAIA_DOMINGO">PRAIA (Domingo)</option>
-                </select>
+                <input type="hidden" id="cfgModalidade" value="TODES_QUARTA">
+                <div class="nav-categorias config-list-selector" id="cfgModalidadeBotoes">
+                    <button type="button" class="btn-cat cfg-list-option" data-id="TODES_QUARTA">QUARTA 🏳️‍🌈</button>
+                    <button type="button" class="btn-cat cfg-list-option" data-id="TODES_SEXTA">SEXTA 🏳️‍🌈</button>
+                    <button type="button" class="btn-cat cfg-list-option" data-id="ALLSTARS_QUARTA">QUARTA ⭐</button>
+                    <button type="button" class="btn-cat cfg-list-option" data-id="ALLSTARS_SABADO">SÁBADO ⭐</button>
+                    <button type="button" class="btn-cat cfg-list-option" data-id="ELAX_QUINTA">ELAX ✨</button>
+                    <button type="button" class="btn-cat cfg-list-option" data-id="PRAIA_DOMINGO">PRAIA ☀️</button>
+                </div>
             </div>
             
             <!-- CONTROLE DO FORMULÁRIO PÚBLICO -->
@@ -92,7 +94,7 @@
             <div class="modal-grid">
                 <div class="campo-modal">
                     <label>ADM do Dia:</label>
-                    <input type="text" id="cfgAdm" class="input-modal">
+                    <select id="cfgAdm" class="input-modal"></select>
                 </div>
 
                 <div class="campo-modal">
@@ -178,22 +180,6 @@
         </div>
     </div>
 </div>
-
-    <!-- BARRA DE NAVEGAÇÃO INFERIOR -->
-    <nav class="bottom-nav">
-        <a href="index.html" class="nav-link active">
-            <span class="nav-icon">📝</span>
-            <span class="nav-label">Presença</span>
-        </a>
-        <a href="times.html" class="nav-link">
-            <span class="nav-icon">⚖️</span>
-            <span class="nav-label">Times</span>
-        </a>
-        <a href="jogadores.html" class="nav-link">
-            <span class="nav-icon">👥</span>
-            <span class="nav-label">Banco</span>
-        </a>
-    </nav>
 
     <script src="load-navbar.js"></script>
     <script type="module" src="app.js"></script>
