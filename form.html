@@ -241,8 +241,6 @@
                 const inscricaoRef = doc(collection(formularioRef, "inscricoes"));
                 const nome = document.getElementById('iptNome').value.trim();
                 const email = document.getElementById('iptEmail').value.trim();
-                let resultado = null;
-
                 await runTransaction(db, async transaction => {
                     const formularioSnap = await transaction.get(formularioRef);
                     if (!formularioSnap.exists() || !formularioSnap.data().vigente) throw new Error("LINK_EXPIRADO");
@@ -271,16 +269,11 @@
                         ultimaInscricaoId: inscricaoId,
                         ultimaInscricaoUid: auth.currentUser.uid
                     });
-                    resultado = { posicao, status };
                 });
 
                 document.getElementById('corpoForm').style.display = 'none';
-                document.getElementById('successTitle').innerText = resultado.status === "espera"
-                    ? "Você entrou na lista de espera"
-                    : "Inscrição confirmada!";
-                document.getElementById('successText').innerText = resultado.status === "espera"
-                    ? `Sua posição atual é ${resultado.posicao}.`
-                    : `Você entrou na posição ${resultado.posicao} da lista principal.`;
+                document.getElementById('successTitle').innerText = "Inscrição confirmada!";
+                document.getElementById('successText').innerText = "Agradecemos sua inscrição 💖 Aguarde pelo lançamento da lista no grupo do WhatsApp.";
                 document.getElementById('sucesso').style.display = 'block';
             } catch (err) {
                 if (err.message === "LINK_EXPIRADO") {

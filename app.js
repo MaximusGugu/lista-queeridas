@@ -1,4 +1,4 @@
-import { auth, collectionGroup, db, doc, getDoc, onSnapshot, query, runTransaction, serverTimestamp, setDoc, where } from "./firebase-config.js";
+import { auth, collection, db, doc, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, setDoc, where } from "./firebase-config.js";
 
 // --- 1. FUNÇÕES GLOBAIS (MODAIS) ---
 window.abrirModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "flex"; };
@@ -25,6 +25,7 @@ const assinaturasFormulariosPublicos = new Map();
 const formulariosEmRotacao = new Set();
 const inscricoesEmFila = new Set();
 const idsJogadoresConhecidos = new Map();
+const listenersInscricoesPublicas = new Map();
 let filaSincronizacao = Promise.resolve();
 
 function gerarSeedFormulario() {
@@ -207,17 +208,57 @@ function enfileirarInscricaoPublica(referencia) {
         .finally(() => inscricoesEmFila.delete(referencia.path));
 }
 
+function enfileirarSnapshotInscricoes(snapshot) {
+    [...snapshot.docs]
+        .sort((a, b) => {
+            const dataA = a.data().criadoEm?.toMillis?.() || 0;
+            const dataB = b.data().criadoEm?.toMillis?.() || 0;
+            return dataA - dataB || Number(a.data().posicao || 0) - Number(b.data().posicao || 0);
+        })
+        .forEach(documento => enfileirarInscricaoPublica(documento.ref));
+}
+
+function consultaInscricoesPendentes(formularioRef) {
+    return query(collection(formularioRef, "inscricoes"), where("sincronizada", "==", false));
+}
+
+async function verificarInscricoesPendentes(formularioRef) {
+    const snapshot = await getDocs(consultaInscricoesPendentes(formularioRef));
+    enfileirarSnapshotInscricoes(snapshot);
+}
+
+function acompanharFormularioPublico(documentoFormulario) {
+    const caminho = documentoFormulario.ref.path;
+    verificarInscricoesPendentes(documentoFormulario.ref)
+        .catch(error => console.error("Falha ao buscar inscrições pendentes:", error));
+
+    if (!documentoFormulario.data().vigente) {
+        listenersInscricoesPublicas.get(caminho)?.();
+        listenersInscricoesPublicas.delete(caminho);
+        return;
+    }
+    if (listenersInscricoesPublicas.has(caminho)) return;
+
+    const cancelar = onSnapshot(
+        consultaInscricoesPendentes(documentoFormulario.ref),
+        enfileirarSnapshotInscricoes,
+        error => console.error("Falha ao acompanhar inscrições públicas:", error)
+    );
+    listenersInscricoesPublicas.set(caminho, cancelar);
+}
+
 function iniciarSincronizacaoInscricoesPublicas() {
-    const pendentes = query(collectionGroup(db, "inscricoes"), where("sincronizada", "==", false));
-    onSnapshot(pendentes, snapshot => {
-        [...snapshot.docs]
-            .sort((a, b) => {
-                const dataA = a.data().criadoEm?.toMillis?.() || 0;
-                const dataB = b.data().criadoEm?.toMillis?.() || 0;
-                return dataA - dataB || Number(a.data().posicao || 0) - Number(b.data().posicao || 0);
-            })
-            .forEach(documento => enfileirarInscricaoPublica(documento.ref));
-    }, error => console.error("Falha ao acompanhar inscrições públicas:", error));
+    onSnapshot(collection(db, "formularios_publicos"), snapshot => {
+        snapshot.docChanges().forEach(alteracao => {
+            const caminho = alteracao.doc.ref.path;
+            if (alteracao.type === "removed") {
+                listenersInscricoesPublicas.get(caminho)?.();
+                listenersInscricoesPublicas.delete(caminho);
+                return;
+            }
+            acompanharFormularioPublico(alteracao.doc);
+        });
+    }, error => console.error("Falha ao listar formulários públicos:", error));
 }
 
 // --- 2. INICIALIZAÇÃO FIREBASE ---
