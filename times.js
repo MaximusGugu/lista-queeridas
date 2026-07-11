@@ -19,6 +19,25 @@ function limparNomeImportado(linha) {
         .trim();
 }
 
+function extrairNomesImportados(texto) {
+    const linhas = (texto || "").split(/\r?\n/);
+    const linhaNumerada = /^\s*\d+\s*(?:[-\u2013\u2014.)]\s*|\s+)(.+?)\s*$/u;
+    const possuiNumeracao = linhas.some(linha => linhaNumerada.test(linha));
+
+    return linhas.reduce((nomes, linha) => {
+        const match = linha.match(linhaNumerada);
+        if (possuiNumeracao && !match) return nomes;
+
+        const conteudo = match ? match[1] : linha;
+        const semMarcacao = conteudo.replace(/\*/g, "").trim();
+        if (!semMarcacao || /^lista\s+de\s+espera\b/iu.test(semMarcacao)) return nomes;
+
+        const nome = limparNomeImportado(conteudo);
+        if (nome) nomes.push(nome);
+        return nomes;
+    }, []);
+}
+
 function normalizarBusca(str) {
     return (str || "")
         .normalize("NFD")
@@ -103,6 +122,20 @@ function resolverNotaReal(p, tipoNota) {
     return notaBanco(p, tipoNota);
 }
 
+function jogadorEhAllStar(p) {
+    const nomeOficial = encontrarJogadorBanco(p.nome) || p.nome;
+    const doBanco = bancoPermanente[nomeOficial];
+    return doBanco ? !!doBanco.allStars : !!p.allStars;
+}
+
+function somaNotasTime(time) {
+    return time.players.reduce((soma, jogador) => soma + resolverNotaReal(jogador, notaTipoAtiva), 0);
+}
+
+function quantidadeAllStarsTime(time) {
+    return time.players.filter(jogadorEhAllStar).length;
+}
+
 // --- 2. SINCRONIZAÇÃO EM TEMPO REAL ---
 function ordenarJogadoresTime(jogadores) {
     return jogadores.sort((a, b) => {
@@ -125,9 +158,23 @@ async function montarTimes(nTeams, automatico = false) {
             else { p.locked = false; livres.push(p); }
         } else livres.push(p);
     });
-    livres.sort((a, b) => resolverNotaReal(b, notaTipoAtiva) - resolverNotaReal(a, notaTipoAtiva));
+    const deveDistribuirAllStars = notaTipoAtiva === "notaTodes" || notaTipoAtiva === "notaElax";
+    livres.sort((a, b) => {
+        if (deveDistribuirAllStars && jogadorEhAllStar(a) !== jogadorEhAllStar(b)) {
+            return jogadorEhAllStar(a) ? -1 : 1;
+        }
+        return resolverNotaReal(b, notaTipoAtiva) - resolverNotaReal(a, notaTipoAtiva);
+    });
     livres.forEach(p => {
-        nTA.sort((a, b) => a.players.reduce((s, x) => s + resolverNotaReal(x, notaTipoAtiva), 0) - b.players.reduce((s, x) => s + resolverNotaReal(x, notaTipoAtiva), 0));
+        nTA.sort((a, b) => {
+            if (deveDistribuirAllStars && jogadorEhAllStar(p)) {
+                const diferencaAllStars = quantidadeAllStarsTime(a) - quantidadeAllStarsTime(b);
+                if (diferencaAllStars !== 0) return diferencaAllStars;
+            }
+            const diferencaSoma = somaNotasTime(a) - somaNotasTime(b);
+            if (diferencaSoma !== 0) return diferencaSoma;
+            return a.players.length - b.players.length;
+        });
         nTA[0].players.push(p);
     });
     teams = nTA.map(t => ({ ...t, players: ordenarJogadoresTime(t.players) })).sort((a, b) => a.id - b.id);
@@ -146,7 +193,7 @@ async function montarAutomaticamenteSePronto() {
 }
 
 auth.onAuthStateChanged((user) => {
-    if (user) {
+    if (user && !user.isAnonymous) {
         onSnapshot(docBancoRef, (snap) => { 
             if (snap.exists()) {
                 bancoPermanente = snap.data(); 
@@ -479,8 +526,7 @@ function inicializarEventosTimes() {
         btnConfirmarImport.onclick = async () => {
             const texto = document.getElementById("textoTimesBulk").value.trim();
             if (!texto) return;
-            players = texto.split('\n').map(linha => {
-                const nomeLimpo = limparNomeImportado(linha);
+            players = extrairNomesImportados(texto).map(nomeLimpo => {
                 const nFormatado = formatarNome(nomeLimpo);
                 let m = encontrarJogadorBanco(nFormatado);
                 const dbP = m ? bancoPermanente[m] : null;
@@ -488,7 +534,7 @@ function inicializarEventosTimes() {
                     id: "p-" + Math.random().toString(36).substr(2, 9),
                     nome: m || nFormatado,
                     notaTodes: dbP ? notaBanco(dbP, "notaTodes") : 3,
-                    notaElax: dbP ? notaBanco(dbP, "notaElax") : 3,
+                    notaElax: dbP ? notaBanco(dbP, "notaElax") : 0,
                     notaAllStars: dbP ? notaBanco(dbP, "notaAllStars", 0) : 0,
                     allStars: dbP ? !!dbP.allStars : false,
                     locked: false
@@ -503,10 +549,12 @@ function inicializarEventosTimes() {
         await montarTimes(nTeams, false);
     };
     document.getElementById("btnLimpar").onclick = async () => { if(confirm("Limpar?")) { players = []; teams = []; fase = "rating"; await salvarFirebase(); }};
-    document.getElementById("btnCopyTimes").onclick = () => {
-        let txt = "⭐ *TIMES QUEERIDAS* ⭐\n\n";
+    document.getElementById("btnCopyTimes").onclick = (event) => {
+        let txt = "";
         teams.forEach(t => { txt += `*${t.nome.toUpperCase()}*\n`; t.players.forEach(p => txt += `- ${p.nome}\n`); txt += `\n`; });
-        navigator.clipboard.writeText(txt); alert("Copiado!");
+        navigator.clipboard.writeText(txt.trim()).then(() => {
+            mostrarToastMover(event.clientX, event.clientY, "Copiado!");
+        });
     };
 }
 

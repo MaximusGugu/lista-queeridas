@@ -23,7 +23,7 @@ if (filtroBancoNotas) {
 }
 
 auth.onAuthStateChanged((user) => {
-    if (user) {
+    if (user && !user.isAnonymous) {
         onSnapshot(docBancoRef, (snap) => {
             banco = snap.exists() ? snap.data() : {};
             const spinner = document.getElementById("loadingSpinner");

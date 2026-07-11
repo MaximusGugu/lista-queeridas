@@ -24,11 +24,12 @@
     </div>
 
     <script type="module">
-        import { auth, signInWithEmailAndPassword } from "./firebase-config.js";
+        import { auth, signInWithEmailAndPassword, signOut } from "./firebase-config.js";
         document.getElementById("btnLogin").onclick = async () => {
             const e = document.getElementById("email").value;
             const s = document.getElementById("senha").value;
             try {
+                if (auth.currentUser?.isAnonymous) await signOut(auth);
                 await signInWithEmailAndPassword(auth, e, s);
                 window.location.href = "index.html";
             } catch (err) { alert("Credenciais Inválidas"); }

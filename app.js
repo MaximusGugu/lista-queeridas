@@ -1,4 +1,4 @@
-import { db, doc, getDoc, setDoc, onSnapshot, auth } from "./firebase-config.js";
+import { auth, collectionGroup, db, doc, getDoc, onSnapshot, query, runTransaction, serverTimestamp, setDoc, where } from "./firebase-config.js";
 
 // --- 1. FUNÇÕES GLOBAIS (MODAIS) ---
 window.abrirModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "flex"; };
@@ -21,14 +21,216 @@ let bancoNotas = {};
 const LINK_GRUPO_PADRAO = "https://chat.whatsapp.com/JWHNWnWC8N5IFrpNEwEtii";
 const DIAS_ANTES_ABERTURA_PADRAO = 1;
 const HORARIO_ABERTURA_PADRAO = "12h30";
+const assinaturasFormulariosPublicos = new Map();
+const formulariosEmRotacao = new Set();
+const inscricoesEmFila = new Set();
+const idsJogadoresConhecidos = new Map();
+let filaSincronizacao = Promise.resolve();
+
+function gerarSeedFormulario() {
+    const numeros = new Uint32Array(2);
+    crypto.getRandomValues(numeros);
+    return Array.from(numeros, numero => String(numero).padStart(10, "0")).join("");
+}
+
+function garantirSeedsFormulario() {
+    let alterou = false;
+    Object.values(db_local.listas).forEach(lista => {
+        if (lista?.config && !lista.config.formSeed) {
+            lista.config.formSeed = gerarSeedFormulario();
+            alterou = true;
+        }
+    });
+    return alterou;
+}
+
+function criarIdentificadorFormulario(idLista, config) {
+    return `${idLista}_${config.formSeed}`;
+}
+
+function registrarJogadoresConhecidos(listas) {
+    Object.entries(listas || {}).forEach(([idLista, lista]) => {
+        const conhecidos = idsJogadoresConhecidos.get(idLista) || new Set();
+        (lista.jogadores || []).forEach(jogador => conhecidos.add(String(jogador.id)));
+        idsJogadoresConhecidos.set(idLista, conhecidos);
+    });
+}
+
+function contarOcupacaoInicial(lista) {
+    return (lista.jogadores || []).filter(jogador => jogador.nome && jogador.nome.trim()).length;
+}
+
+function montarDadosFormularioPublico(idLista, lista) {
+    const config = lista.config;
+    const gratuito = (config.pix || "").includes("FREE");
+    return {
+        listaId: idLista,
+        vigente: true,
+        aberto: !!config.formAberto,
+        nomeJogo: config.nomeJogo || "",
+        quadra: config.quadra || "",
+        mapaLink: config.mapaLink || "",
+        grupoLink: config.grupoLink || LINK_GRUPO_PADRAO,
+        data: config.data || "",
+        dia: config.dia || "",
+        inicio: config.inicio || "",
+        fim: config.fim || "",
+        valorTexto: gratuito ? (config.pix || "Jogo FREE") : `R$ ${config.valor || "0,00"}`,
+        limite: Number(config.limite || 0),
+        textoApoio: config.textoApoio || "",
+        abreDiasAntes: Number(config.abreDiasAntes ?? DIAS_ANTES_ABERTURA_PADRAO),
+        abreHorario: config.abreHorario || HORARIO_ABERTURA_PADRAO
+    };
+}
+
+async function publicarFormularioPublico(idLista, { reiniciar = false, forcar = false } = {}) {
+    const lista = db_local.listas[idLista];
+    if (!lista?.config?.formSeed || formulariosEmRotacao.has(idLista) && !reiniciar) return;
+
+    const identificador = criarIdentificadorFormulario(idLista, lista.config);
+    const dados = montarDadosFormularioPublico(idLista, lista);
+    const assinatura = JSON.stringify(dados);
+    if (!reiniciar && !forcar && assinaturasFormulariosPublicos.get(identificador) === assinatura) return;
+
+    const referencia = doc(db, "formularios_publicos", identificador);
+    const existente = await getDoc(referencia);
+    if (!existente.exists() || reiniciar) {
+        await setDoc(referencia, {
+            ...dados,
+            ocupacaoInicial: contarOcupacaoInicial(lista),
+            contadorInscricoes: 0,
+            ultimaInscricaoId: "",
+            ultimaInscricaoUid: "",
+            atualizadoEm: serverTimestamp()
+        });
+    } else {
+        await setDoc(referencia, { ...dados, atualizadoEm: serverTimestamp() }, { merge: true });
+    }
+    assinaturasFormulariosPublicos.set(identificador, assinatura);
+}
+
+async function publicarTodosFormularios() {
+    await Promise.all(Object.keys(db_local.listas).map(idLista => publicarFormularioPublico(idLista)));
+}
+
+async function invalidarFormularioPorIdentificador(identificador) {
+    if (!identificador) return;
+    const referencia = doc(db, "formularios_publicos", identificador);
+    const existente = await getDoc(referencia);
+    if (existente.exists()) {
+        await setDoc(referencia, {
+            vigente: false,
+            aberto: false,
+            atualizadoEm: serverTimestamp()
+        }, { merge: true });
+    }
+    assinaturasFormulariosPublicos.delete(identificador);
+}
+
+async function rotacionarFormulario(idLista, novoStatus) {
+    formulariosEmRotacao.add(idLista);
+    const config = db_local.listas[idLista].config;
+    const configAnterior = { ...config };
+    const identificadorAnterior = config.formSeed ? criarIdentificadorFormulario(idLista, config) : "";
+    let formularioAnteriorInvalidado = false;
+    try {
+        config.formAberto = novoStatus;
+        config.formSeed = gerarSeedFormulario();
+        await publicarFormularioPublico(idLista, { reiniciar: true, forcar: true });
+        await invalidarFormularioPorIdentificador(identificadorAnterior);
+        formularioAnteriorInvalidado = true;
+        await salvar();
+    } catch (error) {
+        const identificadorNovo = criarIdentificadorFormulario(idLista, config);
+        db_local.listas[idLista].config = { ...configAnterior };
+        await invalidarFormularioPorIdentificador(identificadorNovo).catch(() => {});
+        if (formularioAnteriorInvalidado && identificadorAnterior) {
+            const dadosAnteriores = montarDadosFormularioPublico(idLista, db_local.listas[idLista]);
+            await setDoc(doc(db, "formularios_publicos", identificadorAnterior), {
+                ...dadosAnteriores,
+                vigente: true,
+                atualizadoEm: serverTimestamp()
+            }, { merge: true }).catch(() => {});
+        }
+        throw error;
+    } finally {
+        formulariosEmRotacao.delete(idLista);
+    }
+}
+
+function dataInscricaoComoIso(valor) {
+    if (valor?.toDate) return valor.toDate().toISOString();
+    return new Date().toISOString();
+}
+
+async function sincronizarInscricaoPublica(referencia) {
+    await runTransaction(db, async transaction => {
+        const inscricaoSnap = await transaction.get(referencia);
+        const listaSnap = await transaction.get(docRef);
+        if (!inscricaoSnap.exists() || inscricaoSnap.data().sincronizada) return;
+        if (!listaSnap.exists()) throw new Error("Documento de listas não encontrado.");
+
+        const inscricao = inscricaoSnap.data();
+        const dadosAtuais = listaSnap.data();
+        const listas = dadosAtuais.listas || {};
+        const lista = listas[inscricao.listaId];
+        if (!lista) throw new Error(`Lista ${inscricao.listaId} não encontrada.`);
+
+        const jogadores = [...(lista.jogadores || [])];
+        const jaExiste = jogadores.some(jogador => jogador.inscricaoId === inscricao.inscricaoId);
+        if (!jaExiste) {
+            jogadores.push({
+                id: `form-${inscricao.inscricaoId}`,
+                nome: formatarNome(inscricao.nome),
+                email: inscricao.email,
+                timestamp: dataInscricaoComoIso(inscricao.criadoEm),
+                pago: false,
+                inscricaoId: inscricao.inscricaoId,
+                formularioToken: inscricao.formularioToken
+            });
+            listas[inscricao.listaId] = { ...lista, jogadores };
+            transaction.set(docRef, { ...dadosAtuais, listas });
+        }
+        transaction.update(referencia, {
+            sincronizada: true,
+            sincronizadaEm: serverTimestamp()
+        });
+    });
+}
+
+function enfileirarInscricaoPublica(referencia) {
+    if (inscricoesEmFila.has(referencia.path)) return;
+    inscricoesEmFila.add(referencia.path);
+    filaSincronizacao = filaSincronizacao
+        .then(() => sincronizarInscricaoPublica(referencia))
+        .catch(error => console.error("Falha ao sincronizar inscrição pública:", error))
+        .finally(() => inscricoesEmFila.delete(referencia.path));
+}
+
+function iniciarSincronizacaoInscricoesPublicas() {
+    const pendentes = query(collectionGroup(db, "inscricoes"), where("sincronizada", "==", false));
+    onSnapshot(pendentes, snapshot => {
+        [...snapshot.docs]
+            .sort((a, b) => {
+                const dataA = a.data().criadoEm?.toMillis?.() || 0;
+                const dataB = b.data().criadoEm?.toMillis?.() || 0;
+                return dataA - dataB || Number(a.data().posicao || 0) - Number(b.data().posicao || 0);
+            })
+            .forEach(documento => enfileirarInscricaoPublica(documento.ref));
+    }, error => console.error("Falha ao acompanhar inscrições públicas:", error));
+}
 
 // --- 2. INICIALIZAÇÃO FIREBASE ---
 auth.onAuthStateChanged(async (user) => {
-    if (user) {
-        onSnapshot(docRef, (snap) => {
+    if (user && !user.isAnonymous) {
+        onSnapshot(docRef, async (snap) => {
             if (snap.exists() && snap.data().listas) {
+                registrarJogadoresConhecidos(snap.data().listas);
                 db_local.listas = snap.data().listas;
-                atualizarDatasAutomaticas();
+                const seedsCriadas = garantirSeedsFormulario();
+                const datasAtualizadas = atualizarDatasAutomaticas();
+                if (seedsCriadas || datasAtualizadas) await salvar();
+                await publicarTodosFormularios().catch(error => console.error("Falha ao publicar formulários:", error));
                 const spinner = document.getElementById("loadingSpinner");
                 if(spinner) spinner.style.display = "none";
                 render();
@@ -39,19 +241,23 @@ auth.onAuthStateChanged(async (user) => {
             popularSelectAdm();
         });
         inicializarEventosBotoes();
+        iniciarSincronizacaoInscricoesPublicas();
     } else {
         if (!window.location.pathname.includes("login.html")) window.location.href = "login.html";
     }
 });
 
 async function salvar() {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser || auth.currentUser.isAnonymous) return;
     try {
-        const snap = await getDoc(docRef);
-        const listasNuvem = snap.exists() && snap.data().listas ? snap.data().listas : {};
-        const listasMescladas = mesclarListasComNuvem(listasNuvem, db_local.listas);
-        db_local.listas = listasMescladas;
-        await setDoc(docRef, { listas: listasMescladas });
+        await runTransaction(db, async transaction => {
+            const snap = await transaction.get(docRef);
+            const dadosNuvem = snap.exists() ? snap.data() : {};
+            const listasNuvem = dadosNuvem.listas || {};
+            const listasMescladas = mesclarListasComNuvem(listasNuvem, db_local.listas);
+            db_local.listas = listasMescladas;
+            transaction.set(docRef, { ...dadosNuvem, listas: listasMescladas });
+        });
     } 
     catch (e) { console.error("Falha ao salvar:", e); }
 }
@@ -60,9 +266,17 @@ function mesclarListasComNuvem(listasNuvem, listasLocais) {
     const resultado = { ...listasNuvem };
     Object.entries(listasLocais).forEach(([idLista, listaLocal]) => {
         const listaNuvem = listasNuvem[idLista] || {};
+        const jogadoresLocais = [...(listaLocal.jogadores || [])];
+        const idsLocais = new Set(jogadoresLocais.map(jogador => String(jogador.id)));
+        const conhecidos = idsJogadoresConhecidos.get(idLista) || new Set();
+        const jogadoresNovosNaNuvem = (listaNuvem.jogadores || []).filter(jogador => {
+            const id = String(jogador.id);
+            return !idsLocais.has(id) && !conhecidos.has(id);
+        });
         resultado[idLista] = {
             ...listaNuvem,
             ...listaLocal,
+            jogadores: [...jogadoresLocais, ...jogadoresNovosNaNuvem],
             config: {
                 ...(listaNuvem.config || {}),
                 ...(listaLocal.config || {})
@@ -75,7 +289,7 @@ function mesclarListasComNuvem(listasNuvem, listasLocais) {
 async function inicializarBancoNovo() {
     Object.keys(presets).forEach(key => {
         db_local.listas[key] = {
-            config: { ...presets[key], data: calcularProximaData(presets[key].dia), formAberto: false, textoApoio: "", mapaLink: "", grupoLink: LINK_GRUPO_PADRAO, abreDiasAntes: DIAS_ANTES_ABERTURA_PADRAO, abreHorario: HORARIO_ABERTURA_PADRAO },
+            config: { ...presets[key], data: calcularProximaData(presets[key].dia), formAberto: false, formSeed: gerarSeedFormulario(), textoApoio: "", mapaLink: "", grupoLink: LINK_GRUPO_PADRAO, abreDiasAntes: DIAS_ANTES_ABERTURA_PADRAO, abreHorario: HORARIO_ABERTURA_PADRAO },
             jogadores: (key === "ELAX_QUINTA" || key === "PRAIA_DOMINGO") 
                 ? Array.from({ length: key === "ELAX_QUINTA" ? 17 : 14 }, (_, i) => ({ id: "p-"+Date.now()+i, nome: "", pago: false }))
                 : []
@@ -168,7 +382,7 @@ function render() {
     if (infoPreview) {
         const isFree = pix.includes("FREE");
         const urlBase = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-        const linkPublico = `${urlBase}form.html?lista=${aba_ativa}`;
+        const linkPublico = `${urlBase}form.html?lista=${criarIdentificadorFormulario(aba_ativa, listaAtual.config)}`;
 
         infoPreview.innerHTML = `
             <div class="info-card-header">
@@ -268,6 +482,39 @@ function limparNomeImportado(linha) {
         .trim();
 }
 
+function extrairLinhasImportadas(texto) {
+    const linhas = (texto || "").split(/\r?\n/);
+    const linhaNumerada = /^\s*\d+\s*(?:[-\u2013\u2014.)]\s*|\s+)(.+?)\s*$/u;
+    const possuiNumeracao = linhas.some(linha => linhaNumerada.test(linha));
+
+    return linhas.reduce((resultado, linha) => {
+        const match = linha.match(linhaNumerada);
+        if (possuiNumeracao && !match) return resultado;
+
+        const conteudo = match ? match[1] : linha;
+        const semMarcacao = conteudo.replace(/\*/g, "").trim();
+        if (!semMarcacao || /^lista\s+de\s+espera\b/iu.test(semMarcacao)) return resultado;
+
+        const nome = limparNomeImportado(conteudo);
+        if (!nome) return resultado;
+
+        resultado.push({
+            nome,
+            pago: /[\u2705\u2713\u2714\u2611]/u.test(conteudo)
+        });
+        return resultado;
+    }, []);
+}
+
+function nomesEquivalentes(nomeA, nomeB) {
+    const normalizar = (valor) => (valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\p{L}\p{N}]/gu, "")
+        .toLowerCase();
+    return normalizar(nomeA) === normalizar(nomeB);
+}
+
 function formatarNome(n) { return n ? n.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ""; }
 
 function encontrarFuzzyMatch(nomeImportado, banco) {
@@ -295,10 +542,12 @@ function encontrarFuzzyMatch(nomeImportado, banco) {
     return candidatos.length === 1 ? candidatos[0] : null;
 }
 
-function processarLinhaImportada(l) {
-    const p = /[\u2705\u2713\u2714\u2611]/.test(l);
-    const n = limparNomeImportado(l);
-    return { id: "p-"+Date.now()+Math.random(), nome: formatarNome(n), pago: p };
+function processarLinhaImportada(item) {
+    return {
+        id: "p-" + Date.now() + Math.random(),
+        nome: formatarNome(item.nome),
+        pago: item.pago
+    };
 }
 
 function calcularQuantidadeTimesSugerida(totalJogadores) {
@@ -367,7 +616,7 @@ function atualizarDatasAutomaticas() {
             }
         }
     });
-    if (houveMudanca) salvar();
+    return houveMudanca;
 }
 
 async function fecharListaEMontarTimes(listaAtual) {
@@ -390,7 +639,7 @@ async function fecharListaEMontarTimes(listaAtual) {
                 locked: false 
             };
         }
-        return { nome: formatarNome(nomeDigitado), notaTodes: 3, notaElax: 3, notaAllStars: 0, allStars: false, locked: false };
+        return { nome: formatarNome(nomeDigitado), notaTodes: 3, notaElax: 0, notaAllStars: 0, allStars: false, locked: false };
     };
 
     if (listaAtual.config.adm) pagantes.push({ id: "adm-"+Date.now(), ...obterDadosCompleto(listaAtual.config.adm) });
@@ -434,10 +683,13 @@ function inicializarEventosBotoes() {
     const bSav = document.getElementById("btnSalvarConfig");
     if(bSav) bSav.onclick = async () => {
         const mod = document.getElementById("cfgModalidade").value;
+        const configAtual = db_local.listas[mod].config;
+        const novoFormAberto = document.getElementById("cfgFormStatus").value === "true";
+        const statusFoiAlterado = novoFormAberto !== !!configAtual.formAberto;
         const diaSelecionado = document.getElementById("cfgDia").value;
         const dataInformada = document.getElementById("cfgData").value.trim();
         db_local.listas[mod].config = { 
-            ...db_local.listas[mod].config, 
+            ...configAtual, 
             nomeJogo: document.getElementById("cfgNomeJogo").value, 
             quadra: document.getElementById("cfgQuadra").value, 
             mapaLink: document.getElementById("cfgMapaLink").value,
@@ -452,17 +704,29 @@ function inicializarEventosBotoes() {
             limite: parseInt(document.getElementById("cfgLimite").value), 
             pix: document.getElementById("cfgPix").value, 
             adm: formatarNome(document.getElementById("cfgAdm").value),
-            formAberto: document.getElementById("cfgFormStatus").value === "true",
+            formAberto: configAtual.formAberto,
+            formSeed: configAtual.formSeed || gerarSeedFormulario(),
             textoApoio: document.getElementById("cfgTextoApoio").value
         };
-        await salvar(); 
+        if (statusFoiAlterado) {
+            await rotacionarFormulario(mod, novoFormAberto);
+        } else {
+            await salvar();
+            await publicarFormularioPublico(mod, { forcar: true });
+        }
         window.fecharModal('modalConfig');
     };
 
     document.getElementById("btnOpenImport").onclick = () => window.abrirModal('modalImport');
     document.getElementById("btnConfirmarImport").onclick = () => {
         const t = document.getElementById("textoNomesBulk").value.trim();
-        if (t) { db_local.listas[aba_ativa].jogadores = t.split('\n').map(l => processarLinhaImportada(l)).filter(j => j.nome.length > 0); salvar(); }
+        if (t) {
+            const adm = db_local.listas[aba_ativa].config.adm;
+            const itens = extrairLinhasImportadas(t);
+            if (itens.length && nomesEquivalentes(itens[0].nome, adm)) itens.shift();
+            db_local.listas[aba_ativa].jogadores = itens.map(processarLinhaImportada);
+            salvar();
+        }
         window.fecharModal('modalImport');
     };
     document.getElementById("btnClearAll").onclick = () => {
@@ -493,8 +757,7 @@ function vincularEventosResumo(listaAtual) {
     const btnToggleForm = document.getElementById("btnToggleForm");
     if (btnToggleForm) {
         btnToggleForm.onclick = async () => {
-            listaAtual.config.formAberto = !listaAtual.config.formAberto;
-            await salvar();
+            await rotacionarFormulario(aba_ativa, !listaAtual.config.formAberto);
             render();
         };
     }
@@ -502,14 +765,15 @@ function vincularEventosResumo(listaAtual) {
     if (btnCopyFormLink) {
         btnCopyFormLink.onclick = (e) => {
             const urlBase = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-            const linkPublico = `${urlBase}form.html?lista=${aba_ativa}`;
+            const linkPublico = `${urlBase}form.html?lista=${criarIdentificadorFormulario(aba_ativa, listaAtual.config)}`;
             navigator.clipboard.writeText(linkPublico).then(() => mostrarToast(e.clientX, e.clientY));
         };
     }
     document.querySelectorAll('.edit-text').forEach(el => {
-        el.onblur = () => {
+        el.onblur = async () => {
             listaAtual.config[el.getAttribute('data-key')] = el.innerText.trim();
-            salvar();
+            await salvar();
+            await publicarFormularioPublico(aba_ativa, { forcar: true });
             if(['nomeJogo','limite'].includes(el.getAttribute('data-key'))) render();
         };
     });

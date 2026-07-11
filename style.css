@@ -727,6 +727,26 @@ main.container { padding-bottom: 100px !important; }
 .closed-message { display: none; margin: 0 25px 26px 25px; padding: 16px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; color: #9a3412; font-size: 14px; line-height: 1.55; }
 .closed-message a { color: #0369a1; font-weight: 800; text-decoration: underline; }
 
+@media (max-width: 600px) {
+    .public-form-page { padding: 10px; }
+    .form-container { border-radius: 8px; }
+    .banner { border-bottom-width: 6px; }
+    .header-info { padding: 14px 20px 10px; }
+    .status-tag { margin-bottom: 7px; padding: 3px 10px; font-size: 10px; }
+    .header-info h1 { margin: 0 0 12px; font-size: 22px; line-height: 1.15; }
+    .grid-info { gap: 10px 14px; padding: 12px; margin-bottom: 14px; }
+    .info-item { gap: 2px; font-size: 12px; }
+    .info-label { gap: 6px; }
+    .maps-link { margin-left: 20px; font-size: 10px; }
+    .footer-text { margin-top: 14px; font-size: 12px; line-height: 1.45; }
+    .form-body { padding: 0 20px 16px; }
+    .campo { margin-bottom: 12px; }
+    .campo label { margin-bottom: 5px; font-size: 11px; }
+    .input-text { min-height: 46px; padding: 10px 12px; font-size: 14px; }
+    .btn-enviar { min-height: 46px; padding: 12px; font-size: 14px; }
+    .closed-message { margin: 0 20px 16px; padding: 12px; font-size: 13px; line-height: 1.45; }
+}
+
 /* --- LOGIN --- */
 .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
 .login-card { max-width: 350px; text-align: center; border-left: none; border: 2px solid var(--color-allstars); }

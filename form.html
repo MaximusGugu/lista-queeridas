@@ -60,37 +60,70 @@
 
         <div id="sucesso" class="success-screen">
             <div class="success-icon">✅</div>
-            <h2 class="success-title">Inscrição Confirmada!</h2>
-            <p class="success-text">Agradecemos sua inscrição 💖 <br> Aguarde pelo lançamento da lista no grupo.</p>
+            <h2 class="success-title" id="successTitle">Inscrição Confirmada!</h2>
+            <p class="success-text" id="successText">Agradecemos sua inscrição.</p>
             <button onclick="location.reload()" class="btn-link-subtle mt-30">Fazer outra inscrição</button>
         </div>
     </div>
 
     <script type="module">
-        import { db, doc, onSnapshot, setDoc, getDoc } from "./firebase-config.js";
+        import { auth, collection, db, doc, onSnapshot, runTransaction, serverTimestamp, signInAnonymously } from "./firebase-config.js";
 
         const params = new URLSearchParams(window.location.search);
-        const idLista = params.get('lista') || 'TODES_QUARTA';
-        const docRef = doc(db, "sistema", "lista_presenca");
+        const identificadorPublico = params.get('lista') || '';
+        let idLista = null;
+        let formularioAtual = null;
+        const formularioRef = identificadorPublico ? doc(db, "formularios_publicos", identificadorPublico) : null;
         const LINK_GRUPO_PADRAO = "https://chat.whatsapp.com/JWHNWnWC8N5IFrpNEwEtii";
         const DIAS_ANTES_ABERTURA_PADRAO = 1;
         const HORARIO_ABERTURA_PADRAO = "12h30";
 
-        onSnapshot(docRef, (snap) => {
-            if (snap.exists()) {
-                const data = snap.data();
-                const lista = data.listas[idLista];
-                if (lista) renderForm(lista.config);
+        async function iniciarFormularioPublico() {
+            if (!formularioRef) {
+                renderLinkInvalido();
+                return;
             }
+            if (typeof auth.authStateReady === "function") await auth.authStateReady();
+            if (!auth.currentUser) await signInAnonymously(auth);
+            onSnapshot(formularioRef, (snap) => {
+                if (!snap.exists() || !snap.data().vigente) {
+                    formularioAtual = null;
+                    renderLinkInvalido();
+                    return;
+                }
+                formularioAtual = snap.data();
+                idLista = formularioAtual.listaId;
+                renderForm(formularioAtual);
+            }, error => {
+                console.error("Falha ao carregar formulário público:", error);
+                renderLinkInvalido("Não foi possível carregar este formulário.");
+            });
+        }
+
+        iniciarFormularioPublico().catch(error => {
+            console.error("Falha na autenticação pública:", error);
+            renderLinkInvalido("Não foi possível iniciar a inscrição.");
         });
 
+        function renderLinkInvalido(texto = "Peça à organização o link atual do formulário.") {
+            document.getElementById('tagStatus').innerText = "● LINK EXPIRADO";
+            document.getElementById('tagStatus').className = "status-tag tag-fechado";
+            document.getElementById('txtTitulo').innerText = "Este link não está mais disponível";
+            document.querySelector('.grid-info').style.display = 'none';
+            document.getElementById('txtDescricao').innerText = '';
+            document.getElementById('formBody').style.display = 'none';
+            const mensagem = document.getElementById('msgListaFechada');
+            mensagem.style.display = 'block';
+            mensagem.innerText = texto;
+        }
+
         function renderForm(cfg) {
+            document.querySelector('.grid-info').style.display = 'grid';
             document.getElementById('txtTitulo').innerText = cfg.nomeJogo;
             document.getElementById('txtData').innerText = `${cfg.data} (${cfg.dia})`;
             document.getElementById('txtHora').innerText = `${cfg.inicio} às ${cfg.fim}`;
             document.getElementById('txtLocal').innerText = cfg.quadra;
-            const isFree = (cfg.pix || "").includes("FREE");
-            document.getElementById('txtValor').innerText = isFree ? cfg.pix : `R$ ${cfg.valor}`;
+            document.getElementById('txtValor').innerText = cfg.valorTexto || "";
             document.getElementById('txtDescricao').innerText = cfg.textoApoio || "";
             
             // LOGICA DO LINK DO MAPA
@@ -119,7 +152,7 @@
             const formBody = document.getElementById('formBody');
             const msgListaFechada = document.getElementById('msgListaFechada');
 
-            if (cfg.formAberto) {
+            if (cfg.aberto) {
                 tag.innerText = "● INSCRIÇÕES ABERTAS";
                 tag.className = "status-tag tag-aberto";
                 btn.disabled = false;
@@ -204,29 +237,62 @@
             btn.innerText = "PROCESSANDO...";
 
             try {
-                const snap = await getDoc(docRef);
-                const listas = snap.data().listas;
-                if (!listas[idLista]?.config?.formAberto) {
-                    renderForm(listas[idLista].config);
-                    return;
-                }
-                
-                const novoJogador = {
-                    id: "p-" + Date.now(),
-                    nome: document.getElementById('iptNome').value.trim(),
-                    email: document.getElementById('iptEmail').value.trim(),
-                    timestamp: new Date().toISOString(),
-                    pago: false
-                };
+                if (!formularioRef || !auth.currentUser || !formularioAtual) throw new Error("LINK_EXPIRADO");
+                const inscricaoRef = doc(collection(formularioRef, "inscricoes"));
+                const nome = document.getElementById('iptNome').value.trim();
+                const email = document.getElementById('iptEmail').value.trim();
+                let resultado = null;
 
-                listas[idLista].jogadores.push(novoJogador);
-                await setDoc(docRef, { listas });
+                await runTransaction(db, async transaction => {
+                    const formularioSnap = await transaction.get(formularioRef);
+                    if (!formularioSnap.exists() || !formularioSnap.data().vigente) throw new Error("LINK_EXPIRADO");
+                    const formulario = formularioSnap.data();
+                    if (!formulario.aberto) throw new Error("FORMULARIO_FECHADO");
+
+                    const contadorInscricoes = Number(formulario.contadorInscricoes || 0) + 1;
+                    const posicao = Number(formulario.ocupacaoInicial || 0) + contadorInscricoes + 1;
+                    const status = posicao <= Number(formulario.limite || 0) ? "principal" : "espera";
+                    const inscricaoId = inscricaoRef.id;
+
+                    transaction.set(inscricaoRef, {
+                        inscricaoId,
+                        formularioToken: identificadorPublico,
+                        listaId: formulario.listaId,
+                        nome,
+                        email,
+                        posicao,
+                        status,
+                        autorUid: auth.currentUser.uid,
+                        criadoEm: serverTimestamp(),
+                        sincronizada: false
+                    });
+                    transaction.update(formularioRef, {
+                        contadorInscricoes,
+                        ultimaInscricaoId: inscricaoId,
+                        ultimaInscricaoUid: auth.currentUser.uid
+                    });
+                    resultado = { posicao, status };
+                });
 
                 document.getElementById('corpoForm').style.display = 'none';
+                document.getElementById('successTitle').innerText = resultado.status === "espera"
+                    ? "Você entrou na lista de espera"
+                    : "Inscrição confirmada!";
+                document.getElementById('successText').innerText = resultado.status === "espera"
+                    ? `Sua posição atual é ${resultado.posicao}.`
+                    : `Você entrou na posição ${resultado.posicao} da lista principal.`;
                 document.getElementById('sucesso').style.display = 'block';
             } catch (err) {
-                alert("Erro ao salvar. Tente novamente.");
+                if (err.message === "LINK_EXPIRADO") {
+                    renderLinkInvalido();
+                } else if (err.message === "FORMULARIO_FECHADO") {
+                    if (formularioAtual) renderForm({ ...formularioAtual, aberto: false });
+                } else {
+                    console.error("Erro ao salvar inscrição:", err);
+                    alert("Erro ao salvar. Tente novamente.");
+                }
                 btn.disabled = false;
+                btn.innerText = "ENVIAR";
             }
         };
     </script>
