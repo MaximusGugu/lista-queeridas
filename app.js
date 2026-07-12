@@ -1,8 +1,37 @@
 import { auth, collection, db, doc, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, setDoc, where } from "./firebase-config.js";
 
 // --- 1. FUNÇÕES GLOBAIS (MODAIS) ---
-window.abrirModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "flex"; };
-window.fecharModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
+let scrollAntesDoModal = 0;
+
+function bloquearScrollDaPagina() {
+    if (document.body.classList.contains("modal-open")) return;
+    scrollAntesDoModal = window.scrollY;
+    document.body.classList.add("modal-open");
+    document.body.style.top = `-${scrollAntesDoModal}px`;
+}
+
+function liberarScrollDaPagina() {
+    const existeModalAberto = [...document.querySelectorAll(".modal-overlay")]
+        .some(modal => getComputedStyle(modal).display !== "none");
+    if (existeModalAberto) return;
+    document.body.classList.remove("modal-open");
+    document.body.style.top = "";
+    window.scrollTo(0, scrollAntesDoModal);
+}
+
+window.abrirModal = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    bloquearScrollDaPagina();
+    el.style.display = "flex";
+};
+
+window.fecharModal = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = "none";
+    liberarScrollDaPagina();
+};
 
 const presets = {
     "TODES_QUARTA": { nomeJogo: "Vôlei de quadra TODES 🏳️‍🌈", quadra: "DOM BOSCO - ITAJAÍ", dia: "Quarta-Feira", inicio: "20h30", fim: "22h30", limite: 21, pix: "(51) 980644783 (Pagamento até às 14h)", valor: "15,00", adm: "Gustavo José" },
@@ -27,6 +56,7 @@ const inscricoesEmFila = new Set();
 const idsJogadoresConhecidos = new Map();
 const listenersInscricoesPublicas = new Map();
 let filaSincronizacao = Promise.resolve();
+let duplicidadeEmCadastro = null;
 
 function gerarSeedFormulario() {
     const numeros = new Uint32Array(2);
@@ -280,6 +310,8 @@ auth.onAuthStateChanged(async (user) => {
         onSnapshot(docBancoRef, (snap) => {
             bancoNotas = snap.exists() ? snap.data() : {};
             popularSelectAdm();
+            const listaAtual = db_local.listas[aba_ativa];
+            if (listaAtual) renderDuplicidades(listaAtual);
         });
         inicializarEventosBotoes();
         iniciarSincronizacaoInscricoesPublicas();
@@ -458,6 +490,7 @@ function render() {
         vincularEventosResumo(listaAtual);
     }
     renderLista(listaAtual, limite, adm);
+    renderDuplicidades(listaAtual);
 }
 
 function renderLista(listaAtual, limite, adm) {
@@ -581,6 +614,339 @@ function encontrarFuzzyMatch(nomeImportado, banco) {
         return nomeLimp.split(/\s+/).every(palavra => textoBusca.includes(palavra));
     });
     return candidatos.length === 1 ? candidatos[0] : null;
+}
+
+function normalizarNomeDuplicidade(valor) {
+    return (valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function distanciaLevenshtein(a, b) {
+    const anterior = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 1; i <= a.length; i++) {
+        let diagonal = anterior[0];
+        anterior[0] = i;
+        for (let j = 1; j <= b.length; j++) {
+            const acima = anterior[j];
+            anterior[j] = Math.min(
+                anterior[j] + 1,
+                anterior[j - 1] + 1,
+                diagonal + (a[i - 1] === b[j - 1] ? 0 : 1)
+            );
+            diagonal = acima;
+        }
+    }
+    return anterior[b.length];
+}
+
+function pontuarDuplicidade(nomeA, nomeB) {
+    const a = normalizarNomeDuplicidade(nomeA);
+    const b = normalizarNomeDuplicidade(nomeB);
+    if (!a || !b) return 0;
+    if (a === b) return 1;
+
+    const bancoA = encontrarFuzzyMatch(nomeA, bancoNotas);
+    const bancoB = encontrarFuzzyMatch(nomeB, bancoNotas);
+    if (bancoA && bancoB && bancoA === bancoB) return 0.99;
+
+    const compactoA = a.replace(/\s/g, "");
+    const compactoB = b.replace(/\s/g, "");
+    const menor = compactoA.length <= compactoB.length ? compactoA : compactoB;
+    const maior = compactoA.length > compactoB.length ? compactoA : compactoB;
+    if (menor.length >= 3 && maior.includes(menor) && maior.length - menor.length <= 5) return 0.9;
+
+    const tokensA = a.split(" ");
+    const tokensB = b.split(" ");
+    if (tokensA[0] === tokensB[0]) {
+        const ultimoA = tokensA[tokensA.length - 1];
+        const ultimoB = tokensB[tokensB.length - 1];
+        if (ultimoA[0] === ultimoB[0]) return 0.91;
+        if (tokensA.length === 1 || tokensB.length === 1) return 0.86;
+    }
+
+    const maiorTamanho = Math.max(compactoA.length, compactoB.length);
+    const similaridade = 1 - distanciaLevenshtein(compactoA, compactoB) / maiorTamanho;
+    return similaridade >= 0.84 ? similaridade : 0;
+}
+
+function chaveDuplicidade(idA, idB) {
+    return [String(idA), String(idB)].sort().join("::");
+}
+
+function detectarDuplicidades(listaAtual) {
+    const entradas = [];
+    if (listaAtual.config.adm?.trim()) {
+        entradas.push({ id: `adm-${aba_ativa}`, nome: listaAtual.config.adm, isAdm: true });
+    }
+    (listaAtual.jogadores || []).forEach(jogador => {
+        if (jogador.nome?.trim()) entradas.push({ id: String(jogador.id), nome: jogador.nome, isAdm: false });
+    });
+
+    const ignoradas = new Set(listaAtual.duplicidadesIgnoradas || []);
+    const encontradas = [];
+    for (let atual = 1; atual < entradas.length; atual++) {
+        let melhor = null;
+        for (let anterior = 0; anterior < atual; anterior++) {
+            const antigo = entradas[anterior];
+            const novo = entradas[atual];
+            const chave = chaveDuplicidade(antigo.id, novo.id);
+            if (ignoradas.has(chave)) continue;
+            const pontuacao = pontuarDuplicidade(antigo.nome, novo.nome);
+            if (pontuacao < 0.84 || melhor && melhor.pontuacao >= pontuacao) continue;
+            melhor = {
+                antigo,
+                novo,
+                chave,
+                pontuacao,
+                nomeBanco: encontrarFuzzyMatch(antigo.nome, bancoNotas) || encontrarFuzzyMatch(novo.nome, bancoNotas)
+            };
+        }
+        if (melhor) encontradas.push(melhor);
+    }
+    return encontradas;
+}
+
+async function removerEntradaDuplicada(listaAtual, duplicidade) {
+    listaAtual.jogadores = listaAtual.jogadores.filter(jogador => String(jogador.id) !== duplicidade.novo.id);
+    await salvar();
+    render();
+}
+
+function encontrarCorrespondenciaBanco(nome) {
+    const nomeNormalizado = normalizarNomeDuplicidade(nome);
+    const nomesBanco = Object.keys(bancoNotas).filter(nomeBanco => nomeBanco !== "versao");
+
+    const principal = nomesBanco.find(
+        nomeBanco => normalizarNomeDuplicidade(nomeBanco) === nomeNormalizado
+    );
+    if (principal) return { nomeBanco: principal, prioridade: 3 };
+
+    const porApelido = nomesBanco.find(nomeBanco =>
+        String(bancoNotas[nomeBanco]?.apelidos || "")
+            .split(",")
+            .some(apelido => normalizarNomeDuplicidade(apelido) === nomeNormalizado)
+    );
+    if (porApelido) return { nomeBanco: porApelido, prioridade: 2 };
+
+    const fuzzy = encontrarFuzzyMatch(nome, bancoNotas);
+    return fuzzy ? { nomeBanco: fuzzy, prioridade: 1 } : null;
+}
+
+function escolherNomePrincipalDuplicidade(duplicidade) {
+    const correspondenciaAntiga = encontrarCorrespondenciaBanco(duplicidade.antigo.nome);
+    const correspondenciaNova = encontrarCorrespondenciaBanco(duplicidade.novo.nome);
+
+    if (correspondenciaAntiga && correspondenciaNova &&
+        correspondenciaAntiga.nomeBanco === correspondenciaNova.nomeBanco) {
+        return { nomeBanco: correspondenciaAntiga.nomeBanco, correspondencias: [correspondenciaAntiga] };
+    }
+
+    const correspondencias = [correspondenciaAntiga, correspondenciaNova].filter(Boolean);
+    if (correspondencias.length) {
+        correspondencias.sort((a, b) => b.prioridade - a.prioridade);
+        return { nomeBanco: correspondencias[0].nomeBanco, correspondencias };
+    }
+
+    const nomes = [duplicidade.antigo.nome, duplicidade.novo.nome];
+    nomes.sort((a, b) => {
+        const tokens = normalizarNomeDuplicidade(b).split(" ").length - normalizarNomeDuplicidade(a).split(" ").length;
+        return tokens || b.length - a.length;
+    });
+    return { nomeBanco: formatarNome(nomes[0]), correspondencias: [] };
+}
+
+async function mesclarDuplicidade(listaAtual, duplicidade) {
+    const { nomeBanco, correspondencias } = escolherNomePrincipalDuplicidade(duplicidade);
+    const cadastroPrincipal = bancoNotas[nomeBanco] || {
+        notaTodes: 3,
+        notaElax: 0,
+        notaAllStars: 0,
+        allStars: false,
+        adm: false,
+        apelidos: ""
+    };
+    const outrosCadastros = correspondencias
+        .map(item => item.nomeBanco)
+        .filter(nome => nome !== nomeBanco && bancoNotas[nome]);
+    const apelidosExistentes = [
+        ...String(cadastroPrincipal.apelidos || "").split(","),
+        ...outrosCadastros.flatMap(nome => [nome, ...String(bancoNotas[nome].apelidos || "").split(",")])
+    ];
+    const apelidos = adicionarApelidosDaDuplicidade(apelidosExistentes, nomeBanco, duplicidade);
+    bancoNotas[nomeBanco] = { ...cadastroPrincipal, apelidos: apelidos.join(", ") };
+
+    outrosCadastros.forEach(nome => delete bancoNotas[nome]);
+    Object.values(db_local.listas).forEach(lista => {
+        if (outrosCadastros.some(nome => nomesEquivalentes(lista.config?.adm, nome))) {
+            lista.config.adm = nomeBanco;
+        }
+        (lista.jogadores || []).forEach(jogador => {
+            if (outrosCadastros.some(nome => nomesEquivalentes(jogador.nome, nome))) {
+                jogador.nome = nomeBanco;
+            }
+        });
+    });
+
+    if (duplicidade.antigo.isAdm) {
+        listaAtual.config.adm = nomeBanco;
+    } else {
+        const jogadorMantido = listaAtual.jogadores.find(
+            jogador => String(jogador.id) === duplicidade.antigo.id
+        );
+        if (jogadorMantido) jogadorMantido.nome = nomeBanco;
+    }
+    listaAtual.jogadores = listaAtual.jogadores.filter(
+        jogador => String(jogador.id) !== duplicidade.novo.id
+    );
+
+    await setDoc(docBancoRef, bancoNotas);
+    await salvar();
+    render();
+}
+
+function definirNotaCadastroDuplicidade(id, valor) {
+    const elemento = document.getElementById(id);
+    if (elemento) elemento.innerText = String(Math.max(0, Math.min(10, Number(valor) || 0)));
+}
+
+function atualizarAllStarsCadastroDuplicidade(aplicarNotaPadrao = true) {
+    const marcado = document.getElementById("duplicateBankAllStars").checked;
+    const grupo = document.getElementById("duplicateBankAllStarsGroup");
+    const grid = document.querySelector(".duplicate-bank-ratings");
+    grupo.classList.toggle("hidden", !marcado);
+    grid.classList.toggle("has-allstars", marcado);
+    if (aplicarNotaPadrao && marcado && Number(document.getElementById("duplicateBankAllStarsNote").innerText) === 0) {
+        definirNotaCadastroDuplicidade("duplicateBankAllStarsNote", 3);
+    }
+}
+
+function preencherCadastroDuplicidade() {
+    if (!duplicidadeEmCadastro) return;
+    const duplicidade = duplicidadeEmCadastro.duplicidade;
+    const nomeInput = document.getElementById("duplicateBankName");
+    nomeInput.value = duplicidade.novo.nome;
+    nomeInput.disabled = false;
+    document.getElementById("duplicateBankAliases").value = "";
+    document.getElementById("duplicateBankAllStars").checked = false;
+    document.getElementById("duplicateBankAdm").checked = false;
+    definirNotaCadastroDuplicidade("duplicateBankTodes", 3);
+    definirNotaCadastroDuplicidade("duplicateBankElax", 0);
+    definirNotaCadastroDuplicidade("duplicateBankAllStarsNote", 0);
+    atualizarAllStarsCadastroDuplicidade(false);
+    document.getElementById("btnSaveDuplicateBank").innerText = "CADASTRAR PESSOA";
+}
+
+function abrirCadastroDuplicidade(listaAtual, duplicidade) {
+    duplicidadeEmCadastro = { listaAtual, duplicidade };
+    document.getElementById("duplicateBankTitle").innerText = `Cadastrando ${duplicidade.novo.nome}`;
+    preencherCadastroDuplicidade();
+    window.abrirModal("modalDuplicateBank");
+}
+
+function adicionarApelidosDaDuplicidade(apelidos, nomeBanco, duplicidade) {
+    const resultado = apelidos.map(valor => valor.trim()).filter(Boolean);
+    const normalizados = new Set(resultado.map(normalizarNomeDuplicidade));
+    [duplicidade.antigo.nome, duplicidade.novo.nome].forEach(nome => {
+        const normalizado = normalizarNomeDuplicidade(nome);
+        if (normalizado !== normalizarNomeDuplicidade(nomeBanco) && !normalizados.has(normalizado)) {
+            resultado.push(nome);
+            normalizados.add(normalizado);
+        }
+    });
+    return resultado;
+}
+
+async function salvarCadastroDuplicidade() {
+    if (!duplicidadeEmCadastro) return;
+    const { listaAtual, duplicidade } = duplicidadeEmCadastro;
+    const nomeBanco = formatarNome(document.getElementById("duplicateBankName").value.trim());
+    if (!nomeBanco) {
+        alert("Informe o nome da pessoa.");
+        return;
+    }
+
+    const nomeJaExiste = Object.keys(bancoNotas).find(
+        nome => normalizarNomeDuplicidade(nome) === normalizarNomeDuplicidade(nomeBanco)
+    );
+    if (nomeJaExiste) {
+        alert(`Essa pessoa já existe no banco como ${nomeJaExiste}. Use a opção de vincular.`);
+        return;
+    }
+
+    const allStars = document.getElementById("duplicateBankAllStars").checked;
+    const apelidos = document.getElementById("duplicateBankAliases").value.split(",");
+    bancoNotas[nomeBanco] = {
+        notaTodes: Number(document.getElementById("duplicateBankTodes").innerText),
+        notaElax: Number(document.getElementById("duplicateBankElax").innerText),
+        notaAllStars: allStars ? Number(document.getElementById("duplicateBankAllStarsNote").innerText) : 0,
+        allStars,
+        adm: document.getElementById("duplicateBankAdm").checked,
+        apelidos: apelidos.map(valor => valor.trim()).filter(Boolean).join(", ")
+    };
+
+    const ignoradas = new Set(listaAtual.duplicidadesIgnoradas || []);
+    ignoradas.add(duplicidade.chave);
+    listaAtual.duplicidadesIgnoradas = [...ignoradas];
+
+    await setDoc(docBancoRef, bancoNotas);
+    await salvar();
+    duplicidadeEmCadastro = null;
+    window.fecharModal("modalDuplicateBank");
+    render();
+}
+
+function renderDuplicidades(listaAtual) {
+    const container = document.getElementById("duplicateReview");
+    if (!container) return;
+    container.innerHTML = "";
+
+    detectarDuplicidades(listaAtual).forEach(duplicidade => {
+        const alerta = document.createElement("section");
+        alerta.className = "duplicate-alert";
+
+        const titulo = document.createElement("div");
+        titulo.className = "duplicate-alert-title";
+        titulo.textContent = "Possível duplicação encontrada";
+
+        const texto = document.createElement("div");
+        texto.className = "duplicate-alert-text";
+        texto.append("O nome ");
+        const novo = document.createElement("strong");
+        novo.textContent = duplicidade.novo.nome;
+        texto.append(novo, " pode ser a mesma pessoa que ");
+        const antigo = document.createElement("strong");
+        antigo.textContent = duplicidade.antigo.nome;
+        texto.append(antigo, ".");
+
+        const acoes = document.createElement("div");
+        acoes.className = "duplicate-actions";
+
+        const remover = document.createElement("button");
+        remover.className = "btn btn-sub";
+        remover.textContent = "REMOVER O ÚLTIMO";
+        remover.onclick = () => removerEntradaDuplicada(listaAtual, duplicidade);
+        acoes.appendChild(remover);
+
+        const vincular = document.createElement("button");
+        vincular.className = "btn btn-sub";
+        vincular.textContent = "MESCLAR AMBAS";
+        vincular.onclick = () => mesclarDuplicidade(listaAtual, duplicidade);
+        acoes.appendChild(vincular);
+
+        const cadastrar = document.createElement("button");
+        cadastrar.className = "btn btn-sub";
+        cadastrar.textContent = "CADASTRAR NOVA PESSOA";
+        cadastrar.onclick = () => abrirCadastroDuplicidade(listaAtual, duplicidade);
+        acoes.appendChild(cadastrar);
+
+        alerta.append(titulo, texto, acoes);
+        container.appendChild(alerta);
+    });
 }
 
 function processarLinhaImportada(item) {
@@ -758,6 +1124,24 @@ function inicializarEventosBotoes() {
         window.fecharModal('modalConfig');
     };
 
+    const duplicateAllStars = document.getElementById("duplicateBankAllStars");
+    if (duplicateAllStars) duplicateAllStars.onchange = () => atualizarAllStarsCadastroDuplicidade();
+    document.querySelectorAll(".duplicate-note-btn").forEach(button => {
+        button.onclick = () => {
+            const campo = document.getElementById(button.dataset.target);
+            definirNotaCadastroDuplicidade(button.dataset.target, Number(campo.innerText) + Number(button.dataset.delta));
+        };
+    });
+    const btnSaveDuplicateBank = document.getElementById("btnSaveDuplicateBank");
+    if (btnSaveDuplicateBank) btnSaveDuplicateBank.onclick = async () => {
+        btnSaveDuplicateBank.disabled = true;
+        try {
+            await salvarCadastroDuplicidade();
+        } finally {
+            btnSaveDuplicateBank.disabled = false;
+        }
+    };
+
     document.getElementById("btnOpenImport").onclick = () => window.abrirModal('modalImport');
     document.getElementById("btnConfirmarImport").onclick = () => {
         const t = document.getElementById("textoNomesBulk").value.trim();
@@ -766,6 +1150,7 @@ function inicializarEventosBotoes() {
             const itens = extrairLinhasImportadas(t);
             if (itens.length && nomesEquivalentes(itens[0].nome, adm)) itens.shift();
             db_local.listas[aba_ativa].jogadores = itens.map(processarLinhaImportada);
+            db_local.listas[aba_ativa].duplicidadesIgnoradas = [];
             salvar();
         }
         window.fecharModal('modalImport');
@@ -774,6 +1159,7 @@ function inicializarEventosBotoes() {
         if(confirm("Limpar lista?")) {
             const deveManterNumeros = aba_ativa === "ELAX_QUINTA" || aba_ativa === "PRAIA_DOMINGO";
             db_local.listas[aba_ativa].jogadores = deveManterNumeros ? criarJogadoresVaziosParaLista(aba_ativa) : [];
+            db_local.listas[aba_ativa].duplicidadesIgnoradas = [];
             salvar();
         }
     };

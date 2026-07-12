@@ -8,10 +8,10 @@
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/apple-touch-icon.png" />
     <title>Lista Queeridas</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏳️‍🌈</text></svg>">
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/favicon.png" />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260711-5">
     <script src="standalone-navigation.js" defer></script>
 </head>
 <body class="theme-todes">
@@ -22,7 +22,7 @@
         </div>
     </header>
 
-    <main class="container">
+    <main class="container home-page">
         <nav class="nav-categorias" id="menuCategorias">
             <button class="btn-cat main-list-tab" data-id="TODES_QUARTA">QUARTA 🏳️‍🌈</button>
             <button class="btn-cat main-list-tab" data-id="TODES_SEXTA">SEXTA 🏳️‍🌈</button>
@@ -37,6 +37,8 @@
         <div class="action-bar action-bar-primary">
             <button id="btnOpenImport" class="btn btn-main">+ ADICIONAR LISTA</button>
         </div>
+
+        <div id="duplicateReview" class="duplicate-review" aria-live="polite"></div>
 
         <!-- Spinner de Carregamento para a Lista -->
         <div id="loadingSpinner" class="spinner-container">
@@ -175,6 +177,66 @@
     </div>
 
     <!-- MODAL DE IMPORTAÇÃO MANUAL (COLAR LISTA) -->
+    <div id="modalDuplicateBank" class="modal-overlay" style="display:none;">
+        <div class="modal-content duplicate-bank-modal">
+            <h3 id="duplicateBankTitle">Cadastrando pessoa</h3>
+
+            <div class="modal-grid">
+                <div class="campo-modal">
+                    <label>Nome no banco:</label>
+                    <input type="text" id="duplicateBankName" class="input-modal">
+                </div>
+                <div class="campo-modal">
+                    <label>Apelidos:</label>
+                    <input type="text" id="duplicateBankAliases" class="input-modal">
+                </div>
+            </div>
+
+            <div class="person-flags-row modal-checkbox-row">
+                <div class="checkbox-row">
+                    <input type="checkbox" id="duplicateBankAllStars" class="checkbox-control">
+                    <label for="duplicateBankAllStars" class="checkbox-label">All Stars ⭐</label>
+                </div>
+                <div class="checkbox-row">
+                    <input type="checkbox" id="duplicateBankAdm" class="checkbox-control">
+                    <label for="duplicateBankAdm" class="checkbox-label">Adm</label>
+                </div>
+            </div>
+
+            <div class="notas-grid-cadastro duplicate-bank-ratings">
+                <div class="nota-input-group">
+                    <label>Todes</label>
+                    <div class="qty-controls rating-stepper">
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankTodes" data-delta="-1">-</button>
+                        <span id="duplicateBankTodes" class="level-num">3</span>
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankTodes" data-delta="1">+</button>
+                    </div>
+                </div>
+                <div class="nota-input-group">
+                    <label>Elax</label>
+                    <div class="qty-controls rating-stepper">
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankElax" data-delta="-1">-</button>
+                        <span id="duplicateBankElax" class="level-num">0</span>
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankElax" data-delta="1">+</button>
+                    </div>
+                </div>
+                <div id="duplicateBankAllStarsGroup" class="nota-input-group span-2 hidden">
+                    <label>All Stars ⭐</label>
+                    <div class="qty-controls rating-stepper">
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankAllStarsNote" data-delta="-1">-</button>
+                        <span id="duplicateBankAllStarsNote" class="level-num">0</span>
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankAllStarsNote" data-delta="1">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="btnSaveDuplicateBank" class="btn btn-main">SALVAR</button>
+                <button type="button" class="btn btn-sub" onclick="fecharModal('modalDuplicateBank')">CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalImport" class="modal-overlay" style="display:none;">
     <div class="modal-content modal-import-content">
         <h3>Importar Lista</h3>
@@ -187,6 +249,6 @@
 </div>
 
     <script src="load-navbar.js"></script>
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=20260711-6"></script>
 </body>
 </html>

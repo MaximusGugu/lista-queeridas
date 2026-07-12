@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="manifest.json" />
     <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/favicon.png" />
     <title>Inscrição - Queeridas Volleyball</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -14,7 +15,7 @@
 </head>
 <body class="public-form-page">
     <div class="form-container">
-        <img src="https://i.imgur.com/8QO9NeE.png" alt="Banner Queeridas" class="banner" id="imgBanner">
+        <img src="https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png" alt="Banner Queeridas" class="banner" id="imgBanner">
         
         <div id="corpoForm">
             <div class="header-info">
@@ -75,6 +76,7 @@
         let formularioAtual = null;
         const formularioRef = identificadorPublico ? doc(db, "formularios_publicos", identificadorPublico) : null;
         const LINK_GRUPO_PADRAO = "https://chat.whatsapp.com/JWHNWnWC8N5IFrpNEwEtii";
+        const BANNER_PADRAO_URL = "https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png";
         const DIAS_ANTES_ABERTURA_PADRAO = 1;
         const HORARIO_ABERTURA_PADRAO = "12h30";
 
@@ -137,15 +139,7 @@
 
             // --- LÓGICA DAS IMAGENS ---
             const imgBanner = document.getElementById('imgBanner');
-            const banners = {
-                'TODES_QUARTA': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
-                'TODES_SEXTA': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
-                'ALLSTARS_QUARTA': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
-                'ALLSTARS_SABADO': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
-                'ELAX_QUINTA': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png',
-                'PRAIA_DOMINGO': 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png'
-            };
-            imgBanner.src = banners[idLista] || 'https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png';
+            imgBanner.src = BANNER_PADRAO_URL;
 
             const tag = document.getElementById('tagStatus');
             const btn = document.getElementById('btnSubmit');
@@ -273,7 +267,7 @@
 
                 document.getElementById('corpoForm').style.display = 'none';
                 document.getElementById('successTitle').innerText = "Inscrição confirmada!";
-                document.getElementById('successText').innerText = "Agradecemos sua inscrição 💖 Aguarde pelo lançamento da lista no grupo do WhatsApp.";
+                document.getElementById('successText').innerHTML = "Agradecemos sua inscrição 💖<br>Aguarde pelo lançamento da lista no grupo do WhatsApp.";
                 document.getElementById('sucesso').style.display = 'block';
             } catch (err) {
                 if (err.message === "LINK_EXPIRADO") {

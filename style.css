@@ -20,6 +20,7 @@
 }
 
 body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); color: var(--text-dark); margin: 0; padding: 0; }
+body.modal-open { position: fixed; left: 0; right: 0; width: 100%; overflow: hidden; }
 
 .container { padding: 0 15px; max-width: 600px; margin: 0 auto; width: 100%; }
 .row-between { display: flex; justify-content: space-between; align-items: center; }
@@ -119,6 +120,14 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .card-actions .copy-btn,
 .card-actions .copy-link-btn,
 .card-actions .status-toggle-btn { width: 100%; min-height: 36px; }
+
+/* Ritmo vertical da tela inicial. */
+.home-page > .info-card,
+.home-page > .action-bar-primary,
+.home-page > .duplicate-review {
+    margin-top: 0;
+    margin-bottom: 12px;
+}
 
 /* --- LISTA JOGADORES --- */
 .item-compra { 
@@ -316,13 +325,14 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 
 /* --- MODAIS (TAMANHO AMPLIADO PARA DESKTOP) --- */
 .modal-overlay { 
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    position: fixed; inset: 0; width: 100%; height: 100dvh;
     background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; 
-    z-index: 2000; padding: 10px; backdrop-filter: blur(4px); 
+    z-index: 2000; padding: 10px; backdrop-filter: blur(4px);
+    overflow: hidden; overscroll-behavior: contain;
 }
 
 .modal-content { 
-    background: white; padding: 22px; border-radius: 18px; 
+    background: white; padding: 10px; border-radius: 18px; 
     width: 95%; max-width: 620px;
     max-height: calc(100dvh - 20px);
     overflow-y: auto; overflow-x: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
@@ -393,12 +403,41 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 }
 
 @media (max-width: 600px) {
-    .modal-content { padding: 20px; border-radius: 20px; }
+    .modal-overlay {
+        height: 100dvh;
+        padding: calc(8px + env(safe-area-inset-top)) 10px calc(8px + env(safe-area-inset-bottom));
+        align-items: stretch;
+    }
+    .modal-content {
+        width: 100%;
+        max-height: 100%;
+        padding: 20px;
+        border-radius: 20px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+    }
+    #modalConfig {
+        padding: 0;
+        background: white;
+        backdrop-filter: none;
+    }
+    #modalConfig .modal-config-content {
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        max-height: none;
+        padding: calc(16px + env(safe-area-inset-top)) 20px calc(16px + env(safe-area-inset-bottom));
+        border-radius: 0;
+        box-shadow: none;
+    }
     .modal-grid { grid-template-columns: 1fr; gap: 0; }
     .config-panel { grid-column: span 1; padding: 15px; }
     .modal-config-content .row-gap { flex-direction: column; gap: 0; }
     .modal-buttons { flex-direction: column; }
     .action-bar { flex-direction: column; }
+    .duplicate-actions { flex-direction: column; }
     .card-actions-grid { grid-template-columns: 1fr; }
     .bank-player-item { gap: 8px; }
     .bank-player-summary { grid-template-columns: minmax(0, 1fr) auto; padding: 10px 12px; gap: 8px; }
@@ -447,6 +486,22 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg-app); colo
 .action-bar-footer { margin: 20px 0 10px; padding-bottom: 0; }
 .danger-zone { margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,71,87,0.35); }
 .danger-zone .btn { width: 100%; }
+.duplicate-review:empty { display: none; }
+.duplicate-review { display: grid; gap: 8px; }
+.duplicate-alert { padding: 12px; border: 1px solid #f5c2d7; border-left: 4px solid var(--color-todes); border-radius: 8px; background: #fff7fb; }
+.duplicate-alert-title { margin-bottom: 5px; color: #be185d; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+.duplicate-alert-text { color: var(--text-dark); font-size: 12px; line-height: 1.4; }
+.duplicate-alert-text strong { font-weight: 800; }
+.duplicate-actions { display: flex; gap: 6px; margin-top: 10px; }
+.duplicate-actions .btn { min-height: 34px; padding: 8px 10px; font-size: 9px; }
+.duplicate-actions .btn:first-child { color: var(--danger); border-color: #fecdd3 !important; }
+.duplicate-bank-modal { max-width: 620px; }
+.duplicate-bank-ratings { margin: 8px 0 12px; }
+.duplicate-bank-ratings.has-allstars { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.duplicate-bank-ratings.has-allstars #duplicateBankAllStarsGroup { grid-column: auto; }
+@media (max-width: 600px) {
+    .duplicate-bank-ratings.has-allstars { grid-template-columns: 1fr; }
+}
 .btn { font-family: inherit; font-weight: 700; cursor: pointer; border-radius: 12px; border: none; display: flex; align-items: center; justify-content: center; text-transform: uppercase; }
 .btn-main { color: white; padding: 16px; font-size: 12px; width: 100%; transition: background 0.4s; }
 .theme-todes .btn-main { background: var(--color-todes); }
