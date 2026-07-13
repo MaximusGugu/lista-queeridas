@@ -1,5 +1,7 @@
 ﻿import { db, doc, setDoc, onSnapshot, auth } from "./firebase-config.js";
 
+import { carregarBancoCache, salvarBancoCache } from "./banco-cache.js";
+
 // --- 1. FUNÇÕES DE SUPORTE E MODAIS ---
 window.abrirModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "flex"; };
 window.fecharModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "none"; };
@@ -102,9 +104,11 @@ const docBancoRef = doc(db, "sistema", "banco_notas");
 let players = []; 
 let teams = []; 
 let fase = "rating"; 
-let bancoPermanente = {};
+let bancoPermanente = carregarBancoCache();
 let vinculosTemporarios = {}; 
 let modosPendentes = {};
+const editoresNotasAbertos = new Set();
+const rascunhosNotas = new Map();
 let notaTipoAtiva = "notaTodes"; 
 let qtdTimesSugerida = 3;
 let autoMontarTimes = false;
@@ -195,27 +199,25 @@ async function montarAutomaticamenteSePronto() {
 auth.onAuthStateChanged((user) => {
     if (user && !user.isAnonymous) {
         onSnapshot(docBancoRef, (snap) => { 
-            if (snap.exists()) {
-                bancoPermanente = snap.data(); 
-                // Sempre que o banco mudar, re-renderizamos para garantir notas frescas na tela
-                atualizarUI();
-            }
-            
-            onSnapshot(docTimesRef, async (snapTimes) => {
-                if (snapTimes.exists()) { 
-                    const d = snapTimes.data(); 
-                    players = d.players || []; 
-                    teams = d.teams || []; 
-                    fase = d.fase || "rating"; 
-                    notaTipoAtiva = d.notaTipoAtiva || "notaTodes";
-                    qtdTimesSugerida = d.qtdTimesSugerida || calcularQuantidadeTimesSugerida(players.length);
-                    autoMontarTimes = !!d.autoMontarTimes;
-                } 
-                const spinner = document.getElementById("loadingSpinner");
-                if(spinner) spinner.style.display = "none";
-                if (await montarAutomaticamenteSePronto()) return;
-                atualizarUI();
-            });
+            bancoPermanente = snap.exists() ? snap.data() : {};
+            salvarBancoCache(bancoPermanente);
+            // Sempre que o banco mudar, re-renderizamos para garantir notas frescas na tela
+            atualizarUI();
+        });
+        onSnapshot(docTimesRef, async (snapTimes) => {
+            if (snapTimes.exists()) { 
+                const d = snapTimes.data(); 
+                players = d.players || []; 
+                teams = d.teams || []; 
+                fase = d.fase || "rating"; 
+                notaTipoAtiva = d.notaTipoAtiva || "notaTodes";
+                qtdTimesSugerida = d.qtdTimesSugerida || calcularQuantidadeTimesSugerida(players.length);
+                autoMontarTimes = !!d.autoMontarTimes;
+            } 
+            const spinner = document.getElementById("loadingSpinner");
+            if(spinner) spinner.style.display = "none";
+            if (await montarAutomaticamenteSePronto()) return;
+            atualizarUI();
         });
         inicializarEventosTimes();
     } else { window.location.href = "login.html"; }
@@ -228,6 +230,11 @@ async function salvarFirebase() {
     } catch (error) {
         console.error("Erro ao salvar no Firebase:", error);
     }
+}
+
+async function salvarBancoFirebase() {
+    salvarBancoCache(bancoPermanente);
+    await setDoc(docBancoRef, bancoPermanente);
 }
 
 // --- 3. LOGICA DE TRANSIÇÃO DE TELAS (UI) ---
@@ -438,13 +445,35 @@ window.cadastrarNovosEContinuar = async () => {
             houveAlteracaoNoBanco = true;
         }
     });
-    if (houveAlteracaoNoBanco) await setDoc(docBancoRef, bancoPermanente);
+    if (houveAlteracaoNoBanco) await salvarBancoFirebase();
     vinculosTemporarios = {};
     modosPendentes = {};
     await montarTimes(qtdTimesSugerida || calcularQuantidadeTimesSugerida(players.length), true);
 };
 
 // --- 6. RENDERIZAÇÃO DOS TIMES ---
+function encontrarJogadorNosTimes(playerId) {
+    const id = String(playerId);
+    return teams.flatMap(time => time.players).find(player => String(player.id) === id) || null;
+}
+
+function criarRascunhoNotas(player) {
+    const nomeOficial = encontrarJogadorBanco(player.nome) || player.nome;
+    const info = bancoPermanente[nomeOficial] || player;
+    return {
+        notaTodes: notaBanco(info, "notaTodes"),
+        notaElax: notaBanco(info, "notaElax"),
+        notaAllStars: notaBanco(info, "notaAllStars", 0),
+        allStars: info === player ? !!player.allStars : !!info.allStars
+    };
+}
+
+function obterRascunhoNotas(player) {
+    const id = String(player.id);
+    if (!rascunhosNotas.has(id)) rascunhosNotas.set(id, criarRascunhoNotas(player));
+    return rascunhosNotas.get(id);
+}
+
 function renderTeams() {
     const cont = document.getElementById("areaTeams");
     cont.innerHTML = `<p class="label-instrucao">Times sorteados usando nota de <b>${notaTipoAtiva.replace('nota','')}</b>:</p>`;
@@ -466,14 +495,55 @@ function renderTeams() {
                 <div class="team-total">Soma: ${total}</div>
             </div>
             <div class="team-list-drop" data-team-id="${team.id}">
-                ${jogadoresOrdenados.map(p => `
-                    <div class="item-compra ${p.locked ? 'is-locked' : ''}" data-player-id="${p.id}">
-                        <div class="drag-handle">⠿</div>
-                        <div class="input-item">${p.nome}${p.allStars && notaTipoAtiva !== 'notaAllStars' ? ' ⭐' : ''}</div>
-                        <span class="level-num">${resolverNotaReal(p, notaTipoAtiva)}</span>
-                        <button class="btn-lock ${p.locked ? 'locked' : ''}" onclick="window.toggleLock('${p.id}')">${p.locked ? '🔒' : '🔓'}</button>
-                    </div>
-                `).join('')}
+                ${jogadoresOrdenados.map(p => {
+                    const id = String(p.id);
+                    const aberto = editoresNotasAbertos.has(id);
+                    const rascunho = aberto ? obterRascunhoNotas(p) : criarRascunhoNotas(p);
+                    return `
+                        <div class="item-compra team-player-card ${p.locked ? 'is-locked' : ''}" data-player-id="${p.id}">
+                            <div class="team-player-row">
+                                <div class="drag-handle">⠿</div>
+                                <div class="input-item">${p.nome}${jogadorEhAllStar(p) && notaTipoAtiva !== 'notaAllStars' ? ' ⭐' : ''}</div>
+                                <span class="level-num">${resolverNotaReal(p, notaTipoAtiva)}</span>
+                                <button type="button" class="btn-edit btn-edit-rating ${aberto ? 'active' : ''}" aria-expanded="${aberto}" title="Editar notas" onclick="window.toggleEditorNotas(event, '${p.id}')">✏️</button>
+                                <button type="button" class="btn-lock ${p.locked ? 'locked' : ''}" onclick="window.toggleLock('${p.id}')">${p.locked ? '🔒' : '🔓'}</button>
+                            </div>
+                            <div class="team-player-edit-body ${aberto ? '' : 'hidden'}">
+                                <div class="checkbox-row team-player-allstars-toggle">
+                                    <input type="checkbox" id="team-allstars-${p.id}" class="checkbox-control" ${rascunho.allStars ? 'checked' : ''} onchange="window.toggleTeamPlayerAllStars('${p.id}', this.checked)">
+                                    <label for="team-allstars-${p.id}" class="checkbox-label">All Stars ⭐</label>
+                                </div>
+                                <div class="notas-grid-cadastro team-player-rating-grid ${rascunho.allStars ? 'has-allstars' : ''}">
+                                    <div class="nota-input-group">
+                                        <label>Todes</label>
+                                        <div class="qty-controls rating-stepper">
+                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaTodes', -1)">-</button>
+                                            <span class="level-num" data-edit-note="notaTodes">${rascunho.notaTodes}</span>
+                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaTodes', 1)">+</button>
+                                        </div>
+                                    </div>
+                                    <div class="nota-input-group">
+                                        <label>Elax</label>
+                                        <div class="qty-controls rating-stepper">
+                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaElax', -1)">-</button>
+                                            <span class="level-num" data-edit-note="notaElax">${rascunho.notaElax}</span>
+                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaElax', 1)">+</button>
+                                        </div>
+                                    </div>
+                                    <div class="nota-input-group team-player-allstars-note ${rascunho.allStars ? '' : 'hidden'}">
+                                        <label>All Stars ⭐</label>
+                                        <div class="qty-controls rating-stepper">
+                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaAllStars', -1)">-</button>
+                                            <span class="level-num" data-edit-note="notaAllStars">${rascunho.notaAllStars}</span>
+                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaAllStars', 1)">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-main btn-save-team-rating" onclick="window.salvarNotasJogadorTime('${p.id}')">SALVAR NOTAS</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
         `;
         cont.appendChild(sec);
@@ -564,6 +634,98 @@ window.toggleLock = async (pId) => {
         if(p) { p.locked = !p.locked; t.players = ordenarJogadoresTime(t.players); }
     });
     await salvarFirebase();
+};
+
+function encontrarCardJogador(playerId) {
+    const id = String(playerId);
+    return [...document.querySelectorAll("#areaTeams .team-player-card")]
+        .find(card => String(card.dataset.playerId) === id) || null;
+}
+
+window.toggleEditorNotas = (event, playerId) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const id = String(playerId);
+    const card = encontrarCardJogador(id);
+    const corpo = card?.querySelector(".team-player-edit-body");
+    const botao = card?.querySelector(".btn-edit-rating");
+    if (!corpo || !botao) return;
+
+    const abrir = corpo.classList.contains("hidden");
+    corpo.classList.toggle("hidden", !abrir);
+    botao.classList.toggle("active", abrir);
+    botao.setAttribute("aria-expanded", String(abrir));
+    if (abrir) {
+        editoresNotasAbertos.add(id);
+    } else {
+        editoresNotasAbertos.delete(id);
+        rascunhosNotas.delete(id);
+    }
+};
+
+window.changeTeamPlayerNota = (playerId, tipo, delta) => {
+    const player = encontrarJogadorNosTimes(playerId);
+    if (!player) return;
+    const rascunho = obterRascunhoNotas(player);
+    rascunho[tipo] = Math.max(0, Math.min(10, Number(rascunho[tipo] || 0) + Number(delta)));
+    const card = encontrarCardJogador(playerId);
+    const valor = card?.querySelector(`[data-edit-note="${tipo}"]`);
+    if (valor) valor.innerText = String(rascunho[tipo]);
+};
+
+window.toggleTeamPlayerAllStars = (playerId, marcado) => {
+    const player = encontrarJogadorNosTimes(playerId);
+    if (!player) return;
+    const rascunho = obterRascunhoNotas(player);
+    rascunho.allStars = !!marcado;
+    if (marcado && Number(rascunho.notaAllStars) === 0) rascunho.notaAllStars = 3;
+
+    const card = encontrarCardJogador(playerId);
+    const grid = card?.querySelector(".team-player-rating-grid");
+    const campo = card?.querySelector(".team-player-allstars-note");
+    const valor = campo?.querySelector('[data-edit-note="notaAllStars"]');
+    grid?.classList.toggle("has-allstars", !!marcado);
+    campo?.classList.toggle("hidden", !marcado);
+    if (valor) valor.innerText = String(rascunho.notaAllStars);
+};
+
+window.salvarNotasJogadorTime = async (playerId) => {
+    const player = encontrarJogadorNosTimes(playerId);
+    if (!player) return;
+    const id = String(playerId);
+    const rascunho = obterRascunhoNotas(player);
+    const nomeOficial = encontrarJogadorBanco(player.nome) || player.nome;
+    const anterior = bancoPermanente[nomeOficial] || {};
+    const dadosAtualizados = {
+        ...anterior,
+        notaTodes: rascunho.notaTodes,
+        notaElax: rascunho.notaElax,
+        notaAllStars: rascunho.allStars ? rascunho.notaAllStars : 0,
+        allStars: rascunho.allStars
+    };
+
+    bancoPermanente[nomeOficial] = dadosAtualizados;
+    const atualizarFotoJogador = (item) => {
+        const mesmoId = String(item.id) === id;
+        const mesmoCadastro = (encontrarJogadorBanco(item.nome) || item.nome) === nomeOficial;
+        if (!mesmoId && !mesmoCadastro) return;
+        item.notaTodes = dadosAtualizados.notaTodes;
+        item.notaElax = dadosAtualizados.notaElax;
+        item.notaAllStars = dadosAtualizados.notaAllStars;
+        item.allStars = dadosAtualizados.allStars;
+    };
+    players.forEach(atualizarFotoJogador);
+    teams.forEach(time => time.players.forEach(atualizarFotoJogador));
+
+    editoresNotasAbertos.delete(id);
+    rascunhosNotas.delete(id);
+    atualizarUI();
+    try {
+        await Promise.all([salvarBancoFirebase(), salvarFirebase()]);
+    } catch (error) {
+        console.error("Erro ao salvar as notas do jogador:", error);
+        alert("As notas ficaram salvas neste dispositivo, mas houve erro ao enviar para a nuvem. Tente novamente.");
+    }
 };
 
 window.prepEditTeam = (el) => { el.dataset.original = el.value; el.value = ""; };

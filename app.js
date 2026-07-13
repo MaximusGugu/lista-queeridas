@@ -1,4 +1,5 @@
 import { auth, collection, db, doc, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, setDoc, where } from "./firebase-config.js";
+import { carregarBancoCache, salvarBancoCache } from "./banco-cache.js";
 
 // --- 1. FUNÇÕES GLOBAIS (MODAIS) ---
 let scrollAntesDoModal = 0;
@@ -46,7 +47,7 @@ let db_local = { listas: {} };
 let aba_ativa = localStorage.getItem("queeridas_aba_ativa") || "TODES_QUARTA";
 const docRef = doc(db, "sistema", "lista_presenca");
 const docBancoRef = doc(db, "sistema", "banco_notas");
-let bancoNotas = {};
+let bancoNotas = carregarBancoCache();
 const LINK_GRUPO_PADRAO = "https://chat.whatsapp.com/JWHNWnWC8N5IFrpNEwEtii";
 const DIAS_ANTES_ABERTURA_PADRAO = 1;
 const HORARIO_ABERTURA_PADRAO = "12h30";
@@ -309,6 +310,7 @@ auth.onAuthStateChanged(async (user) => {
         });
         onSnapshot(docBancoRef, (snap) => {
             bancoNotas = snap.exists() ? snap.data() : {};
+            salvarBancoCache(bancoNotas);
             popularSelectAdm();
             const listaAtual = db_local.listas[aba_ativa];
             if (listaAtual) renderDuplicidades(listaAtual);
@@ -804,6 +806,7 @@ async function mesclarDuplicidade(listaAtual, duplicidade) {
         jogador => String(jogador.id) !== duplicidade.novo.id
     );
 
+    salvarBancoCache(bancoNotas);
     await setDoc(docBancoRef, bancoNotas);
     await salvar();
     render();
@@ -893,6 +896,7 @@ async function salvarCadastroDuplicidade() {
     ignoradas.add(duplicidade.chave);
     listaAtual.duplicidadesIgnoradas = [...ignoradas];
 
+    salvarBancoCache(bancoNotas);
     await setDoc(docBancoRef, bancoNotas);
     await salvar();
     duplicidadeEmCadastro = null;

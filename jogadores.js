@@ -1,7 +1,8 @@
 import { db, doc, setDoc, onSnapshot, auth } from "./firebase-config.js";
+import { carregarBancoCache, salvarBancoCache } from "./banco-cache.js";
 
 const docBancoRef = doc(db, "sistema", "banco_notas");
-let banco = {};
+let banco = carregarBancoCache();
 let filtroBancoAtivo = "todos";
 
 const inputBuscaBanco = document.getElementById("buscaBanco");
@@ -26,6 +27,7 @@ auth.onAuthStateChanged((user) => {
     if (user && !user.isAnonymous) {
         onSnapshot(docBancoRef, (snap) => {
             banco = snap.exists() ? snap.data() : {};
+            salvarBancoCache(banco);
             const spinner = document.getElementById("loadingSpinner");
             if(spinner) spinner.style.display = "none";
             renderBanco();
@@ -120,6 +122,7 @@ function escaparHtml(valor) {
 }
 
 async function salvarFirebase() {
+    salvarBancoCache(banco);
     await setDoc(docBancoRef, banco);
 }
 
@@ -370,4 +373,10 @@ function renderBanco() {
         div.querySelector(".delete-inline-player").onclick = () => window.excluirDoBanco(nome);
         container.appendChild(div);
     });
+}
+
+if (Object.keys(banco).length > 0) {
+    const spinner = document.getElementById("loadingSpinner");
+    if (spinner) spinner.style.display = "none";
+    renderBanco();
 }

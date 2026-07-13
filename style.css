@@ -702,6 +702,16 @@ main.container { padding-bottom: 100px !important; }
 #areaTeams .item-compra .input-item { min-width: 0; overflow-wrap: anywhere; }
 #areaTeams .item-compra .level-num { min-width: 14px; font-size: 12px; }
 #areaTeams .item-compra .btn-lock { width: 22px; height: 22px; font-size: 10px; }
+#areaTeams .team-player-card { display: block; padding: 0; overflow: hidden; }
+.team-player-row { display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 3px 5px; }
+.team-player-row .input-item { flex: 1; }
+#areaTeams .team-player-row .btn-edit-rating { width: 22px; height: 22px; flex-shrink: 0; font-size: 11px; }
+.btn-edit-rating.active { background: #0284c7; color: white; }
+.team-player-edit-body { padding: 10px; border-top: 1px dashed #cbd5e1; background: rgba(255, 255, 255, 0.72); }
+.team-player-allstars-toggle { width: fit-content; margin: 0 0 10px; padding: 7px 10px; }
+.team-player-rating-grid { margin-bottom: 10px; }
+.team-player-rating-grid.has-allstars { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.btn-save-team-rating { width: 100%; min-height: 34px; padding: 8px 12px; font-size: 10px; }
 .team-section { margin-bottom: 25px; }
 .team-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 5px; }
 .team-title { font-size: 22px; font-weight: 800; border: none; background: transparent; outline: none; width: 65%; padding: 2px 5px; transition: all 0.2s ease; border-bottom: 2px solid transparent; }
