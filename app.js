@@ -519,6 +519,9 @@ function renderLista(listaAtual, limite, adm) {
     let botaoInserido = false;
     listaAtual.jogadores.forEach((jog, index) => {
         const pos = index + 2;
+        const emailFormulario = jog.inscricaoId && jog.email
+            ? `<span class="form-submitter-email" title="Inscrição enviada por ${escaparHtml(jog.email)}">${escaparHtml(jog.email)}</span>`
+            : "";
         if (pos === limite + 1) {
             if (bFechar) { listaDOM.appendChild(bFechar); botaoInserido = true; }
             const s = document.createElement("div");
@@ -532,7 +535,10 @@ function renderLista(listaAtual, limite, adm) {
         div.innerHTML = `
             <div class="drag-handle">&#10303;</div>
             <span class="num">${pos}</span>
-            <span class="input-item" contenteditable="true">${formatarNome(jog.nome)}</span>
+            <div class="player-main-info ${emailFormulario ? 'has-form-email' : ''}">
+                <span class="input-item" contenteditable="true">${formatarNome(jog.nome)}</span>
+                ${emailFormulario}
+            </div>
             <input type="checkbox" class="check-pago" ${jog.pago ? 'checked' : ''}>
             <button class="btn-del">&times;</button>
         `;
@@ -592,6 +598,15 @@ function nomesEquivalentes(nomeA, nomeB) {
 }
 
 function formatarNome(n) { return n ? n.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : ""; }
+
+function escaparHtml(valor) {
+    return String(valor ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
 
 function encontrarFuzzyMatch(nomeImportado, banco) {
     const normalizar = (str) => (str || "")

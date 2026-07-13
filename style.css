@@ -216,6 +216,36 @@ body.modal-open { position: fixed; left: 0; right: 0; width: 100%; overflow: hid
     overflow-wrap: anywhere;
 }
 
+#listaJogadores .player-main-info {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+}
+
+#listaJogadores .player-main-info .input-item {
+    flex: none;
+    min-height: 18px;
+}
+
+#listaJogadores .player-main-info.has-form-email .input-item {
+    max-width: 65%;
+}
+
+#listaJogadores .form-submitter-email {
+    min-width: 0;
+    flex: 1;
+    color: #94a3b8;
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 #listaJogadores .num {
     width: 20px;
     height: auto;
