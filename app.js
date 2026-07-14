@@ -1,5 +1,6 @@
 import { auth, collection, db, doc, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, setDoc, where } from "./firebase-config.js";
 import { carregarBancoCache, salvarBancoCache } from "./banco-cache.js";
+import { exigirAcesso, monitorarAcesso } from "./access-control.js";
 
 // --- 1. FUNÇÕES GLOBAIS (MODAIS) ---
 let scrollAntesDoModal = 0;
@@ -293,8 +294,13 @@ function iniciarSincronizacaoInscricoesPublicas() {
 }
 
 // --- 2. INICIALIZAÇÃO FIREBASE ---
+let appInicializado = false;
 auth.onAuthStateChanged(async (user) => {
-    if (user && !user.isAnonymous) {
+    if (user && !appInicializado) {
+        const perfil = await exigirAcesso(user);
+        if (!perfil) return;
+        appInicializado = true;
+        monitorarAcesso(perfil);
         onSnapshot(docRef, async (snap) => {
             if (snap.exists() && snap.data().listas) {
                 registrarJogadoresConhecidos(snap.data().listas);
@@ -317,7 +323,7 @@ auth.onAuthStateChanged(async (user) => {
         });
         inicializarEventosBotoes();
         iniciarSincronizacaoInscricoesPublicas();
-    } else {
+    } else if (!user) {
         if (!window.location.pathname.includes("login.html")) window.location.href = "login.html";
     }
 });
@@ -376,7 +382,7 @@ async function inicializarBancoNovo() {
 // --- 3. LOGICA DO MODAL DE CONFIGURAÇÃO ---
 function obterNomesAdm(valorAtual = "") {
     const admins = Object.keys(bancoNotas)
-        .filter(nome => nome !== "versao" && bancoNotas[nome]?.adm)
+        .filter(nome => nome !== "versao" && Array.isArray(bancoNotas[nome]?.admEmails) && bancoNotas[nome].admEmails.length > 0)
         .sort((a, b) => a.localeCompare(b, "pt-BR"));
     if (valorAtual && !admins.includes(valorAtual)) admins.unshift(valorAtual);
     return admins;
@@ -392,7 +398,7 @@ function popularSelectAdm(valorAtual = "") {
     if (!admins.length) {
         const option = document.createElement("option");
         option.value = "";
-        option.textContent = "Nenhum ADM marcado no banco";
+        option.textContent = "Nenhum ADM vinculado em Acessos";
         select.appendChild(option);
         select.value = "";
         return;
@@ -783,8 +789,9 @@ async function mesclarDuplicidade(listaAtual, duplicidade) {
         notaTodes: 3,
         notaElax: 0,
         notaAllStars: 0,
+        todes: true,
+        elax: false,
         allStars: false,
-        adm: false,
         apelidos: ""
     };
     const outrosCadastros = correspondencias
@@ -795,7 +802,12 @@ async function mesclarDuplicidade(listaAtual, duplicidade) {
         ...outrosCadastros.flatMap(nome => [nome, ...String(bancoNotas[nome].apelidos || "").split(",")])
     ];
     const apelidos = adicionarApelidosDaDuplicidade(apelidosExistentes, nomeBanco, duplicidade);
-    bancoNotas[nomeBanco] = { ...cadastroPrincipal, apelidos: apelidos.join(", ") };
+    const admEmails = new Set([
+        ...(Array.isArray(cadastroPrincipal.admEmails) ? cadastroPrincipal.admEmails : []),
+        ...outrosCadastros.flatMap(nome => Array.isArray(bancoNotas[nome]?.admEmails) ? bancoNotas[nome].admEmails : [])
+    ]);
+    bancoNotas[nomeBanco] = { ...cadastroPrincipal, apelidos: apelidos.join(", "), admEmails: [...admEmails].sort() };
+    delete bancoNotas[nomeBanco].adm;
 
     outrosCadastros.forEach(nome => delete bancoNotas[nome]);
     Object.values(db_local.listas).forEach(lista => {
@@ -832,14 +844,15 @@ function definirNotaCadastroDuplicidade(id, valor) {
     if (elemento) elemento.innerText = String(Math.max(0, Math.min(10, Number(valor) || 0)));
 }
 
-function atualizarAllStarsCadastroDuplicidade(aplicarNotaPadrao = true) {
-    const marcado = document.getElementById("duplicateBankAllStars").checked;
-    const grupo = document.getElementById("duplicateBankAllStarsGroup");
-    const grid = document.querySelector(".duplicate-bank-ratings");
-    grupo.classList.toggle("hidden", !marcado);
-    grid.classList.toggle("has-allstars", marcado);
-    if (aplicarNotaPadrao && marcado && Number(document.getElementById("duplicateBankAllStarsNote").innerText) === 0) {
-        definirNotaCadastroDuplicidade("duplicateBankAllStarsNote", 3);
+function atualizarModalidadeCadastroDuplicidade(checkboxId, notaId, aplicarNotaPadrao = true) {
+    const checkbox = document.getElementById(checkboxId);
+    const grupo = checkbox?.closest(".rating-modality");
+    if (!checkbox || !grupo) return;
+    grupo.classList.toggle("is-disabled", !checkbox.checked);
+    grupo.querySelectorAll(".btn-qty").forEach(botao => { botao.disabled = !checkbox.checked; });
+    if (!checkbox.checked) definirNotaCadastroDuplicidade(notaId, 0);
+    if (aplicarNotaPadrao && checkbox.checked && Number(document.getElementById(notaId).innerText) === 0) {
+        definirNotaCadastroDuplicidade(notaId, 3);
     }
 }
 
@@ -850,12 +863,15 @@ function preencherCadastroDuplicidade() {
     nomeInput.value = duplicidade.novo.nome;
     nomeInput.disabled = false;
     document.getElementById("duplicateBankAliases").value = "";
+    document.getElementById("duplicateBankTodesActive").checked = true;
+    document.getElementById("duplicateBankElaxActive").checked = false;
     document.getElementById("duplicateBankAllStars").checked = false;
-    document.getElementById("duplicateBankAdm").checked = false;
     definirNotaCadastroDuplicidade("duplicateBankTodes", 3);
     definirNotaCadastroDuplicidade("duplicateBankElax", 0);
     definirNotaCadastroDuplicidade("duplicateBankAllStarsNote", 0);
-    atualizarAllStarsCadastroDuplicidade(false);
+    atualizarModalidadeCadastroDuplicidade("duplicateBankTodesActive", "duplicateBankTodes", false);
+    atualizarModalidadeCadastroDuplicidade("duplicateBankElaxActive", "duplicateBankElax", false);
+    atualizarModalidadeCadastroDuplicidade("duplicateBankAllStars", "duplicateBankAllStarsNote", false);
     document.getElementById("btnSaveDuplicateBank").innerText = "CADASTRAR PESSOA";
 }
 
@@ -896,14 +912,17 @@ async function salvarCadastroDuplicidade() {
         return;
     }
 
+    const todes = document.getElementById("duplicateBankTodesActive").checked;
+    const elax = document.getElementById("duplicateBankElaxActive").checked;
     const allStars = document.getElementById("duplicateBankAllStars").checked;
     const apelidos = document.getElementById("duplicateBankAliases").value.split(",");
     bancoNotas[nomeBanco] = {
-        notaTodes: Number(document.getElementById("duplicateBankTodes").innerText),
-        notaElax: Number(document.getElementById("duplicateBankElax").innerText),
+        notaTodes: todes ? Number(document.getElementById("duplicateBankTodes").innerText) : 0,
+        notaElax: elax ? Number(document.getElementById("duplicateBankElax").innerText) : 0,
         notaAllStars: allStars ? Number(document.getElementById("duplicateBankAllStarsNote").innerText) : 0,
+        todes,
+        elax,
         allStars,
-        adm: document.getElementById("duplicateBankAdm").checked,
         apelidos: apelidos.map(valor => valor.trim()).filter(Boolean).join(", ")
     };
 
@@ -1061,11 +1080,13 @@ async function fecharListaEMontarTimes(listaAtual) {
                 notaTodes: notaBanco(info, "notaTodes"),
                 notaElax: notaBanco(info, "notaElax"),
                 notaAllStars: notaBanco(info, "notaAllStars", 0),
+                todes: typeof info.todes === "boolean" ? info.todes : notaBanco(info, "notaTodes", 0) > 0,
+                elax: typeof info.elax === "boolean" ? info.elax : notaBanco(info, "notaElax", 0) > 0,
                 allStars: !!info.allStars, 
                 locked: false 
             };
         }
-        return { nome: formatarNome(nomeDigitado), notaTodes: 3, notaElax: 0, notaAllStars: 0, allStars: false, locked: false };
+        return { nome: formatarNome(nomeDigitado), notaTodes: 3, notaElax: 0, notaAllStars: 0, todes: true, elax: false, allStars: false, locked: false };
     };
 
     if (listaAtual.config.adm) pagantes.push({ id: "adm-"+Date.now(), ...obterDadosCompleto(listaAtual.config.adm) });
@@ -1143,8 +1164,14 @@ function inicializarEventosBotoes() {
         window.fecharModal('modalConfig');
     };
 
-    const duplicateAllStars = document.getElementById("duplicateBankAllStars");
-    if (duplicateAllStars) duplicateAllStars.onchange = () => atualizarAllStarsCadastroDuplicidade();
+    [
+        ["duplicateBankTodesActive", "duplicateBankTodes"],
+        ["duplicateBankElaxActive", "duplicateBankElax"],
+        ["duplicateBankAllStars", "duplicateBankAllStarsNote"]
+    ].forEach(([checkboxId, notaId]) => {
+        const checkbox = document.getElementById(checkboxId);
+        if (checkbox) checkbox.onchange = () => atualizarModalidadeCadastroDuplicidade(checkboxId, notaId);
+    });
     document.querySelectorAll(".duplicate-note-btn").forEach(button => {
         button.onclick = () => {
             const campo = document.getElementById(button.dataset.target);

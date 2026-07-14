@@ -25,3 +25,11 @@ export function salvarBancoCache(dados) {
         console.warn("Não foi possível atualizar o cache local do banco:", error);
     }
 }
+
+export function limparBancoCache() {
+    try {
+        localStorage.removeItem(CHAVE_CACHE_BANCO);
+    } catch (error) {
+        console.warn("Não foi possível limpar o cache local do banco:", error);
+    }
+}

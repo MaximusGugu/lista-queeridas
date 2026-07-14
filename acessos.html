@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+    <title>Queeridas - Acessos</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="standalone-navigation.js" defer></script>
+</head>
+<body class="theme-allstars">
+    <header class="header-compact">
+        <div class="container center-header">
+            <h1>CONTROLE DE ACESSOS 🔐</h1>
+        </div>
+    </header>
+
+    <main id="accessPage" class="container access-page page-main-spaced hidden">
+        <section class="info-card access-intro">
+            <h2>Liberar ADM</h2>
+            <p>Autorize uma conta Google para acessar Listas, Times e Banco.</p>
+            <form id="accessForm" class="access-form">
+                <label for="accessEmail">E-mail Google do ADM</label>
+                <div class="access-form-row">
+                    <input type="email" id="accessEmail" class="input-modal" autocomplete="off" placeholder="nome@gmail.com" required>
+                    <button type="submit" id="btnGrantAccess" class="btn btn-main">LIBERAR</button>
+                </div>
+                <p id="accessMessage" class="access-message hidden" role="status"></p>
+            </form>
+        </section>
+
+        <section class="access-section">
+            <p class="label-instrucao">Masters fixos</p>
+            <div id="masterAccessList" class="list-container access-list">
+                <div class="spinner-container"><div class="spinner"></div></div>
+            </div>
+        </section>
+
+        <section class="access-section">
+            <p class="label-instrucao">ADMs autorizados</p>
+            <div id="adminAccessList" class="list-container access-list">
+                <div class="spinner-container"><div class="spinner"></div></div>
+            </div>
+        </section>
+    </main>
+
+    <script type="module" src="load-navbar.js"></script>
+    <script type="module" src="acessos.js"></script>
+</body>
+</html>

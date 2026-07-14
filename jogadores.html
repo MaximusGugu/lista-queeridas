@@ -37,40 +37,29 @@
                     <input type="text" id="addApelidos" class="input-modal field-spaced" placeholder="Ex: Gustavo S, Gugu">
                 </div>
 
-                <div class="person-flags-row">
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="addAllStars" class="checkbox-control" onchange="toggleNotaAllStars('add')">
-                        <label for="addAllStars" class="checkbox-label">All Stars ⭐</label>
-                    </div>
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="addAdm" class="checkbox-control">
-                        <label for="addAdm" class="checkbox-label">Adm</label>
-                    </div>
-                </div>
-
                 <div class="notas-grid-cadastro add-rating-grid">
-                    <div class="nota-input-group">
-                        <label>Nota Todes</label>
+                    <div class="nota-input-group rating-modality">
+                        <label class="rating-modality-label"><input type="checkbox" id="addTodes" class="checkbox-control" checked onchange="toggleModalidadeBanco('add', 'todes', this.checked)"> Todes</label>
                         <div class="qty-controls rating-stepper">
-                            <button class="btn-qty" onclick="ajustarNotaManual('addNotaTodes', -1)">-</button>
+                            <button type="button" class="btn-qty" onclick="ajustarNotaManual('addNotaTodes', -1)">-</button>
                             <span id="addNotaTodes" class="level-num">3</span>
-                            <button class="btn-qty" onclick="ajustarNotaManual('addNotaTodes', 1)">+</button>
+                            <button type="button" class="btn-qty" onclick="ajustarNotaManual('addNotaTodes', 1)">+</button>
                         </div>
                     </div>
-                    <div class="nota-input-group">
-                        <label>Nota Elax</label>
+                    <div class="nota-input-group rating-modality is-disabled">
+                        <label class="rating-modality-label"><input type="checkbox" id="addElax" class="checkbox-control" onchange="toggleModalidadeBanco('add', 'elax', this.checked)"> Elax</label>
                         <div class="qty-controls rating-stepper">
-                            <button class="btn-qty" onclick="ajustarNotaManual('addNotaElax', -1)">-</button>
-                            <span id="addNotaElax" class="level-num">3</span>
-                            <button class="btn-qty" onclick="ajustarNotaManual('addNotaElax', 1)">+</button>
+                            <button type="button" class="btn-qty" disabled onclick="ajustarNotaManual('addNotaElax', -1)">-</button>
+                            <span id="addNotaElax" class="level-num">0</span>
+                            <button type="button" class="btn-qty" disabled onclick="ajustarNotaManual('addNotaElax', 1)">+</button>
                         </div>
                     </div>
-                    <div class="nota-input-group span-2" id="groupAddAllStars" style="display: none;">
-                        <label>Nota All Stars ⭐</label>
+                    <div class="nota-input-group rating-modality is-disabled" id="groupAddAllStars">
+                        <label class="rating-modality-label"><input type="checkbox" id="addAllStars" class="checkbox-control" onchange="toggleModalidadeBanco('add', 'allStars', this.checked)"> All Stars ⭐</label>
                         <div class="qty-controls rating-stepper">
-                            <button class="btn-qty" onclick="ajustarNotaManual('addNotaAllStars', -1)">-</button>
-                            <span id="addNotaAllStars" class="level-num">3</span>
-                            <button class="btn-qty" onclick="ajustarNotaManual('addNotaAllStars', 1)">+</button>
+                            <button type="button" class="btn-qty" disabled onclick="ajustarNotaManual('addNotaAllStars', -1)">-</button>
+                            <span id="addNotaAllStars" class="level-num">0</span>
+                            <button type="button" class="btn-qty" disabled onclick="ajustarNotaManual('addNotaAllStars', 1)">+</button>
                         </div>
                     </div>
                 </div>
@@ -108,6 +97,6 @@
     </main>
 
     <script type="module" src="jogadores.js"></script>
-    <script src="load-navbar.js"></script>
+    <script type="module" src="load-navbar.js"></script>
 </body>
 </html>

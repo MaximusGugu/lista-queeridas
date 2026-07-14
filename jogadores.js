@@ -1,5 +1,6 @@
 import { db, doc, setDoc, onSnapshot, auth } from "./firebase-config.js";
 import { carregarBancoCache, salvarBancoCache } from "./banco-cache.js";
+import { exigirAcesso, monitorarAcesso } from "./access-control.js";
 
 const docBancoRef = doc(db, "sistema", "banco_notas");
 let banco = carregarBancoCache();
@@ -23,8 +24,18 @@ if (filtroBancoNotas) {
     });
 }
 
-auth.onAuthStateChanged((user) => {
-    if (user && !user.isAnonymous) {
+let jogadoresInicializado = false;
+auth.onAuthStateChanged(async (user) => {
+    if (user && !jogadoresInicializado) {
+        const perfil = await exigirAcesso(user);
+        if (!perfil) return;
+        jogadoresInicializado = true;
+        monitorarAcesso(perfil);
+        if (Object.keys(banco).length > 0) {
+            const spinner = document.getElementById("loadingSpinner");
+            if (spinner) spinner.style.display = "none";
+            renderBanco();
+        }
         onSnapshot(docBancoRef, (snap) => {
             banco = snap.exists() ? snap.data() : {};
             salvarBancoCache(banco);
@@ -32,7 +43,7 @@ auth.onAuthStateChanged((user) => {
             if(spinner) spinner.style.display = "none";
             renderBanco();
         });
-    } else { window.location.href = "login.html"; }
+    } else if (!user) { window.location.href = "login.html"; }
 });
 
 function formatarNome(nome) {
@@ -54,6 +65,34 @@ function notaBanco(info, campo, padrao = 3) {
         return notaOuPadrao(info.level, padrao);
     }
     return padrao;
+}
+
+const flagPorNota = {
+    notaTodes: "todes",
+    notaElax: "elax",
+    notaAllStars: "allStars"
+};
+
+function modalidadeAtiva(info, campo) {
+    const flag = flagPorNota[campo];
+    if (typeof info?.[flag] === "boolean") return info[flag];
+    if (campo === "notaAllStars") return !!info?.allStars;
+    return notaBanco(info, campo, 0) > 0;
+}
+
+function ehAdmBanco(info) {
+    return Array.isArray(info?.admEmails) && info.admEmails.length > 0;
+}
+
+function atualizarGrupoModalidade(grupo, marcado, seletorNota) {
+    if (!grupo) return;
+    grupo.classList.toggle("is-disabled", !marcado);
+    grupo.querySelectorAll(".btn-qty").forEach(botao => { botao.disabled = !marcado; });
+    const nota = grupo.querySelector(seletorNota);
+    if (nota) {
+        const valorAtual = Number(nota.innerText) || 0;
+        nota.innerText = String(marcado ? (valorAtual || 3) : 0);
+    }
 }
 
 function normalizarBusca(str) {
@@ -133,42 +172,50 @@ window.ajustarNotaManual = (id, v) => {
     el.innerText = val;
 };
 
-window.toggleNotaAllStars = (prefix) => {
-    const isChecked = document.getElementById(`${prefix}AllStars`).checked;
-    const group = document.getElementById(`group${prefix === 'add' ? 'Add' : 'Edit'}AllStars`);
-    if (group) group.style.display = isChecked ? "flex" : "none";
-    const grid = prefix === "add"
-        ? document.querySelector(".add-rating-grid")
-        : document.querySelector(".inline-rating-grid");
-    if (grid) grid.classList.toggle("has-allstars", isChecked);
+window.toggleModalidadeBanco = (prefix, modalidade, marcado) => {
+    const idsNota = {
+        todes: `${prefix}NotaTodes`,
+        elax: `${prefix}NotaElax`,
+        allStars: `${prefix}NotaAllStars`
+    };
+    const checkbox = document.getElementById(`${prefix}${modalidade === "allStars" ? "AllStars" : modalidade.charAt(0).toUpperCase() + modalidade.slice(1)}`);
+    atualizarGrupoModalidade(checkbox?.closest(".rating-modality"), marcado, `#${idsNota[modalidade]}`);
 };
 
 window.adicionarAoBanco = async () => {
     const nome = formatarNome(document.getElementById('addNome').value.trim());
     const apelidos = document.getElementById('addApelidos').value.trim();
+    const isTodes = document.getElementById('addTodes').checked;
+    const isElax = document.getElementById('addElax').checked;
     const isAllStar = document.getElementById('addAllStars').checked;
-    const isAdm = document.getElementById('addAdm').checked;
     
     if(!nome) return;
     
-    banco[nome] = { 
-        notaTodes: parseInt(document.getElementById('addNotaTodes').innerText),
-        notaElax: parseInt(document.getElementById('addNotaElax').innerText),
+    const anterior = banco[nome] || {};
+    banco[nome] = {
+        ...anterior,
+        notaTodes: isTodes ? parseInt(document.getElementById('addNotaTodes').innerText) : 0,
+        notaElax: isElax ? parseInt(document.getElementById('addNotaElax').innerText) : 0,
         notaAllStars: isAllStar ? parseInt(document.getElementById('addNotaAllStars').innerText) : 0,
+        todes: isTodes,
+        elax: isElax,
         allStars: isAllStar,
-        adm: isAdm,
         apelidos: apelidos 
     };
+    delete banco[nome].adm;
 
     // Reset formulário
     document.getElementById('addNome').value = "";
     document.getElementById('addApelidos').value = "";
+    document.getElementById('addTodes').checked = true;
+    document.getElementById('addElax').checked = false;
     document.getElementById('addAllStars').checked = false;
-    document.getElementById('addAdm').checked = false;
     document.getElementById('addNotaTodes').innerText = "3";
-    document.getElementById('addNotaElax').innerText = "3";
-    document.getElementById('addNotaAllStars').innerText = "3";
-    window.toggleNotaAllStars('add');
+    document.getElementById('addNotaElax').innerText = "0";
+    document.getElementById('addNotaAllStars').innerText = "0";
+    window.toggleModalidadeBanco('add', 'todes', true);
+    window.toggleModalidadeBanco('add', 'elax', false);
+    window.toggleModalidadeBanco('add', 'allStars', false);
     const addAccordion = document.querySelector(".add-player-accordion");
     if (addAccordion) addAccordion.open = false;
     
@@ -179,29 +226,45 @@ async function salvarEdicaoInline(nomeOriginal, card) {
     const novoNome = formatarNome(card.querySelector(".edit-player-name").value.trim());
     if (!novoNome) return;
 
+    const anterior = banco[nomeOriginal] || {};
+    const isTodes = card.querySelector(".edit-player-todes").checked;
+    const isElax = card.querySelector(".edit-player-elax").checked;
     const isAllStar = card.querySelector(".edit-player-allstars").checked;
     if (novoNome !== nomeOriginal) delete banco[nomeOriginal];
 
-    banco[novoNome] = {
-        notaTodes: parseInt(card.querySelector(".edit-nota-todes").innerText),
-        notaElax: parseInt(card.querySelector(".edit-nota-elax").innerText),
+    const atualizado = {
+        ...anterior,
+        notaTodes: isTodes ? parseInt(card.querySelector(".edit-nota-todes").innerText) : 0,
+        notaElax: isElax ? parseInt(card.querySelector(".edit-nota-elax").innerText) : 0,
         notaAllStars: isAllStar ? parseInt(card.querySelector(".edit-nota-allstars").innerText) : 0,
+        todes: isTodes,
+        elax: isElax,
         allStars: isAllStar,
-        adm: card.querySelector(".edit-player-adm").checked,
         apelidos: card.querySelector(".edit-player-apelidos").value.trim()
     };
+    delete atualizado.adm;
+    banco[novoNome] = atualizado;
 
     await salvarFirebase();
 }
 
-window.excluirDoBanco = async (nome) => { if(confirm(`Remover ${nome}?`)) { delete banco[nome]; await salvarFirebase(); } };
+window.excluirDoBanco = async (nome) => {
+    if (ehAdmBanco(banco[nome])) {
+        alert("Esta pessoa está vinculada a um acesso de ADM. Remova o vínculo na tela Acessos antes de excluir.");
+        return;
+    }
+    if (confirm(`Remover ${nome}?`)) {
+        delete banco[nome];
+        await salvarFirebase();
+    }
+};
 
 window.exportarNotas = () => {
     const chaves = Object.keys(banco).filter(k => k !== "versao").sort();
     let csvContent = "Nome;NotaTodes;NotaElax;NotaAllStar;AllStarStatus;Apelidos;Adm\n";
     chaves.forEach(nome => {
         const info = banco[nome];
-        csvContent += `${nome};${notaBanco(info, "notaTodes")};${notaBanco(info, "notaElax")};${notaBanco(info, "notaAllStars", 0)};${info.allStars?'SIM':'NAO'};${info.apelidos || ""};${info.adm?'SIM':'NAO'}\n`;
+        csvContent += `${nome};${notaBanco(info, "notaTodes")};${notaBanco(info, "notaElax")};${notaBanco(info, "notaAllStars", 0)};${modalidadeAtiva(info, "notaAllStars")?'SIM':'NAO'};${info.apelidos || ""};${ehAdmBanco(info)?'SIM':'NAO'}\n`;
     });
     const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -232,15 +295,21 @@ window.importarNotas = (event) => {
                     const nomeExistente = encontrarNomeExistente(nome);
                     const chave = nomeExistente || nome;
                     const anterior = banco[chave] || {};
+                    const notaTodes = notaOuPadrao(colunas[1], notaBanco(anterior, "notaTodes"));
+                    const notaElax = notaOuPadrao(colunas[2], notaBanco(anterior, "notaElax"));
+                    const notaAllStars = notaOuPadrao(colunas[3], notaBanco(anterior, "notaAllStars", 0));
+                    const allStars = valorBooleanoCsv(colunas[4], modalidadeAtiva(anterior, "notaAllStars"));
                     banco[chave] = {
                         ...anterior,
-                        notaTodes: notaOuPadrao(colunas[1], notaBanco(anterior, "notaTodes")),
-                        notaElax: notaOuPadrao(colunas[2], notaBanco(anterior, "notaElax")),
-                        notaAllStars: notaOuPadrao(colunas[3], notaBanco(anterior, "notaAllStars", 0)),
-                        allStars: valorBooleanoCsv(colunas[4], !!anterior.allStars),
-                        apelidos: colunas[5] !== undefined && colunas[5] !== "" ? colunas[5] : (anterior.apelidos || ""),
-                        adm: valorBooleanoCsv(colunas[6], !!anterior.adm)
+                        notaTodes,
+                        notaElax,
+                        notaAllStars: allStars ? notaAllStars : 0,
+                        todes: notaTodes > 0,
+                        elax: notaElax > 0,
+                        allStars,
+                        apelidos: colunas[5] !== undefined && colunas[5] !== "" ? colunas[5] : (anterior.apelidos || "")
                     };
+                    delete banco[chave].adm;
                     if (nomeExistente) atualizados++;
                     else criados++;
                 }
@@ -266,15 +335,15 @@ function renderBanco() {
             const info = banco[nome] || {};
             const passaBusca = !termoBusca || nome.toLowerCase().includes(termoBusca) || (info.apelidos || "").toLowerCase().includes(termoBusca);
             if (!passaBusca) return false;
-            if (filtroBancoAtivo === "todes") return notaBanco(info, "notaTodes") > 0;
-            if (filtroBancoAtivo === "elax") return notaBanco(info, "notaElax") > 0;
-            if (filtroBancoAtivo === "allstars") return !!info.allStars && notaBanco(info, "notaAllStars", 0) > 0;
+            if (filtroBancoAtivo === "todes") return modalidadeAtiva(info, "notaTodes");
+            if (filtroBancoAtivo === "elax") return modalidadeAtiva(info, "notaElax");
+            if (filtroBancoAtivo === "allstars") return modalidadeAtiva(info, "notaAllStars");
             return true;
         })
         .sort();
     chaves.forEach((nome, index) => {
         const info = banco[nome];
-        const admBadge = info.adm ? ' <span class="bank-player-badge">ADM</span>' : '';
+        const admBadge = ehAdmBanco(info) ? ' <span class="bank-player-badge">ADM</span>' : '';
         const nomeSeguro = escaparHtml(nome);
         const apelidosSeguros = escaparHtml(info.apelidos || "");
         const notaTodes = notaBanco(info, "notaTodes");
@@ -282,13 +351,13 @@ function renderBanco() {
         const notaAllStars = notaBanco(info, "notaAllStars", 0);
         const editId = `bank-edit-${index}`;
         const notasExibidas = [];
-        if ((filtroBancoAtivo === "todos" || filtroBancoAtivo === "todes") && notaTodes > 0) {
+        if ((filtroBancoAtivo === "todos" || filtroBancoAtivo === "todes") && modalidadeAtiva(info, "notaTodes")) {
             notasExibidas.push({ classe: "todes", texto: `TODES: ${notaTodes}` });
         }
-        if ((filtroBancoAtivo === "todos" || filtroBancoAtivo === "elax") && notaElax > 0) {
+        if ((filtroBancoAtivo === "todos" || filtroBancoAtivo === "elax") && modalidadeAtiva(info, "notaElax")) {
             notasExibidas.push({ classe: "elax", texto: `ELAX: ${notaElax}` });
         }
-        if ((filtroBancoAtivo === "todos" || filtroBancoAtivo === "allstars") && info.allStars && notaAllStars > 0) {
+        if ((filtroBancoAtivo === "todos" || filtroBancoAtivo === "allstars") && modalidadeAtiva(info, "notaAllStars")) {
             notasExibidas.push({ classe: "allstars", texto: `ALL STARS: ${notaAllStars}` });
         }
         const notasHtml = notasExibidas.length
@@ -317,39 +386,29 @@ function renderBanco() {
                             <input type="text" class="input-modal edit-player-apelidos" value="${apelidosSeguros}">
                         </div>
                     </div>
-                    <div class="person-flags-row modal-checkbox-row inline-toggle-grid">
-                        <div class="checkbox-row inline-toggle-field">
-                            <input type="checkbox" id="${editId}-allstars" class="checkbox-control edit-player-allstars" ${info.allStars ? "checked" : ""}>
-                            <label for="${editId}-allstars" class="checkbox-label">All Stars ⭐</label>
-                        </div>
-                        <div class="checkbox-row inline-toggle-field">
-                            <input type="checkbox" id="${editId}-adm" class="checkbox-control edit-player-adm" ${info.adm ? "checked" : ""}>
-                            <label for="${editId}-adm" class="checkbox-label">Adm</label>
-                        </div>
-                    </div>
-                    <div class="notas-grid-cadastro inline-rating-grid ${info.allStars ? "has-allstars" : ""}">
-                        <div class="nota-input-group">
-                            <label>Todes</label>
+                    <div class="notas-grid-cadastro inline-rating-grid">
+                        <div class="nota-input-group rating-modality ${modalidadeAtiva(info, "notaTodes") ? "" : "is-disabled"}">
+                            <label class="rating-modality-label"><input type="checkbox" id="${editId}-todes-active" class="checkbox-control edit-player-todes" ${modalidadeAtiva(info, "notaTodes") ? "checked" : ""}> Todes</label>
                             <div class="qty-controls rating-stepper">
-                                <button class="btn-qty" data-target="${editId}-todes" data-delta="-1">-</button>
+                                <button type="button" class="btn-qty" data-target="${editId}-todes" data-delta="-1" ${modalidadeAtiva(info, "notaTodes") ? "" : "disabled"}>-</button>
                                 <span id="${editId}-todes" class="level-num edit-nota-todes">${notaTodes}</span>
-                                <button class="btn-qty" data-target="${editId}-todes" data-delta="1">+</button>
+                                <button type="button" class="btn-qty" data-target="${editId}-todes" data-delta="1" ${modalidadeAtiva(info, "notaTodes") ? "" : "disabled"}>+</button>
                             </div>
                         </div>
-                        <div class="nota-input-group">
-                            <label>Elax</label>
+                        <div class="nota-input-group rating-modality ${modalidadeAtiva(info, "notaElax") ? "" : "is-disabled"}">
+                            <label class="rating-modality-label"><input type="checkbox" id="${editId}-elax-active" class="checkbox-control edit-player-elax" ${modalidadeAtiva(info, "notaElax") ? "checked" : ""}> Elax</label>
                             <div class="qty-controls rating-stepper">
-                                <button class="btn-qty" data-target="${editId}-elax" data-delta="-1">-</button>
+                                <button type="button" class="btn-qty" data-target="${editId}-elax" data-delta="-1" ${modalidadeAtiva(info, "notaElax") ? "" : "disabled"}>-</button>
                                 <span id="${editId}-elax" class="level-num edit-nota-elax">${notaElax}</span>
-                                <button class="btn-qty" data-target="${editId}-elax" data-delta="1">+</button>
+                                <button type="button" class="btn-qty" data-target="${editId}-elax" data-delta="1" ${modalidadeAtiva(info, "notaElax") ? "" : "disabled"}>+</button>
                             </div>
                         </div>
-                        <div class="nota-input-group span-2 inline-allstars-group" style="${info.allStars ? "" : "display: none;"}">
-                            <label>All Stars ⭐</label>
+                        <div class="nota-input-group rating-modality inline-allstars-group ${modalidadeAtiva(info, "notaAllStars") ? "" : "is-disabled"}">
+                            <label class="rating-modality-label"><input type="checkbox" id="${editId}-allstars" class="checkbox-control edit-player-allstars" ${modalidadeAtiva(info, "notaAllStars") ? "checked" : ""}> All Stars ⭐</label>
                             <div class="qty-controls rating-stepper">
-                                <button class="btn-qty" data-target="${editId}-allstars-note" data-delta="-1">-</button>
+                                <button type="button" class="btn-qty" data-target="${editId}-allstars-note" data-delta="-1" ${modalidadeAtiva(info, "notaAllStars") ? "" : "disabled"}>-</button>
                                 <span id="${editId}-allstars-note" class="level-num edit-nota-allstars">${notaAllStars}</span>
-                                <button class="btn-qty" data-target="${editId}-allstars-note" data-delta="1">+</button>
+                                <button type="button" class="btn-qty" data-target="${editId}-allstars-note" data-delta="1" ${modalidadeAtiva(info, "notaAllStars") ? "" : "disabled"}>+</button>
                             </div>
                         </div>
                     </div>
@@ -363,20 +422,16 @@ function renderBanco() {
         div.querySelectorAll(".btn-qty").forEach(btn => {
             btn.onclick = () => window.ajustarNotaManual(btn.dataset.target, parseInt(btn.dataset.delta));
         });
-        div.querySelector(".edit-player-allstars").onchange = (event) => {
-            const group = div.querySelector(".inline-allstars-group");
-            const grid = div.querySelector(".inline-rating-grid");
-            group.style.display = event.target.checked ? "flex" : "none";
-            grid.classList.toggle("has-allstars", event.target.checked);
-        };
+        [
+            [".edit-player-todes", ".edit-nota-todes"],
+            [".edit-player-elax", ".edit-nota-elax"],
+            [".edit-player-allstars", ".edit-nota-allstars"]
+        ].forEach(([seletorCheckbox, seletorNota]) => {
+            const checkbox = div.querySelector(seletorCheckbox);
+            checkbox.onchange = () => atualizarGrupoModalidade(checkbox.closest(".rating-modality"), checkbox.checked, seletorNota);
+        });
         div.querySelector(".save-inline-player").onclick = () => salvarEdicaoInline(nome, div);
         div.querySelector(".delete-inline-player").onclick = () => window.excluirDoBanco(nome);
         container.appendChild(div);
     });
-}
-
-if (Object.keys(banco).length > 0) {
-    const spinner = document.getElementById("loadingSpinner");
-    if (spinner) spinner.style.display = "none";
-    renderBanco();
 }

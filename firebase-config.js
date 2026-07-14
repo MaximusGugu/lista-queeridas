@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, collectionGroup, doc, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getFirestore, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCSbJFWsDeQhYUn3SwJMFTiI4lk-97uTwg",
@@ -29,9 +29,11 @@ export {
   db,
   collection,
   collectionGroup,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
+  GoogleAuthProvider,
   onAuthStateChanged,
   onSnapshot,
   query,
@@ -39,7 +41,7 @@ export {
   serverTimestamp,
   setDoc,
   signInAnonymously,
-  signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updateDoc,
   where

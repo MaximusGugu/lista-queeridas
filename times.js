@@ -1,6 +1,7 @@
 ﻿import { db, doc, setDoc, onSnapshot, auth } from "./firebase-config.js";
 
 import { carregarBancoCache, salvarBancoCache } from "./banco-cache.js";
+import { exigirAcesso, monitorarAcesso } from "./access-control.js";
 
 // --- 1. FUNÇÕES DE SUPORTE E MODAIS ---
 window.abrirModal = (id) => { const el = document.getElementById(id); if (el) el.style.display = "flex"; };
@@ -87,6 +88,26 @@ function notaBanco(info, campo, padrao = 3) {
     return padrao;
 }
 
+const flagPorNota = {
+    notaTodes: "todes",
+    notaElax: "elax",
+    notaAllStars: "allStars"
+};
+
+function modalidadeAtiva(info, campo) {
+    const flag = flagPorNota[campo];
+    if (typeof info?.[flag] === "boolean") return info[flag];
+    if (campo === "notaAllStars") return !!info?.allStars;
+    return notaBanco(info, campo, 0) > 0;
+}
+
+function definirModalidade(objeto, campo, marcado) {
+    const flag = flagPorNota[campo];
+    objeto[flag] = !!marcado;
+    if (marcado && notaBanco(objeto, campo, 0) === 0) objeto[campo] = 3;
+    if (!marcado) objeto[campo] = 0;
+}
+
 function calcularQuantidadeTimesSugerida(totalJogadores) {
     if (totalJogadores <= 0) return 2;
     return Math.max(2, Math.min(5, Math.round(totalJogadores / 7)));
@@ -120,16 +141,16 @@ function resolverNotaReal(p, tipoNota) {
     const doBanco = bancoPermanente[nomeOficial];
     if (doBanco) {
         // Prioriza nota do banco permanente
-        return notaBanco(doBanco, tipoNota);
+        return modalidadeAtiva(doBanco, tipoNota) ? notaBanco(doBanco, tipoNota) : 0;
     }
     // Fallback para nota da sessão (jogadores novos ainda não salvos no banco)
-    return notaBanco(p, tipoNota);
+    return modalidadeAtiva(p, tipoNota) ? notaBanco(p, tipoNota) : 0;
 }
 
 function jogadorEhAllStar(p) {
     const nomeOficial = encontrarJogadorBanco(p.nome) || p.nome;
     const doBanco = bancoPermanente[nomeOficial];
-    return doBanco ? !!doBanco.allStars : !!p.allStars;
+    return doBanco ? modalidadeAtiva(doBanco, "notaAllStars") : modalidadeAtiva(p, "notaAllStars");
 }
 
 function somaNotasTime(time) {
@@ -196,8 +217,13 @@ async function montarAutomaticamenteSePronto() {
     return false;
 }
 
-auth.onAuthStateChanged((user) => {
-    if (user && !user.isAnonymous) {
+let timesInicializado = false;
+auth.onAuthStateChanged(async (user) => {
+    if (user && !timesInicializado) {
+        const perfil = await exigirAcesso(user);
+        if (!perfil) return;
+        timesInicializado = true;
+        monitorarAcesso(perfil);
         onSnapshot(docBancoRef, (snap) => { 
             bancoPermanente = snap.exists() ? snap.data() : {};
             salvarBancoCache(bancoPermanente);
@@ -220,7 +246,7 @@ auth.onAuthStateChanged((user) => {
             atualizarUI();
         });
         inicializarEventosTimes();
-    } else { window.location.href = "login.html"; }
+    } else if (!user) { window.location.href = "login.html"; }
 });
 
 async function salvarFirebase() { 
@@ -279,6 +305,9 @@ function renderRatingList(pendentes) {
         
         const nomeVinculado = vinculosTemporarios[p.id];
         const modoAtual = modosPendentes[p.id] || "novo";
+        const todesAtivo = modalidadeAtiva(p, "notaTodes");
+        const elaxAtivo = modalidadeAtiva(p, "notaElax");
+        const allStarsAtivo = modalidadeAtiva(p, "notaAllStars");
 
         let htmlInterno = `
             <div class="row-between">
@@ -315,31 +344,27 @@ function renderRatingList(pendentes) {
         } else {
             htmlInterno += `
                 <div class="new-player-rating-grid">
-                    <div class="rating-field"><label>TODES</label>
+                    <div class="rating-field rating-modality ${todesAtivo ? '' : 'is-disabled'}"><label class="rating-modality-label"><input type="checkbox" class="checkbox-control" ${todesAtivo ? 'checked' : ''} onchange="window.setNewModalityStatus('${p.id}', 'notaTodes', this.checked)"> TODES</label>
                         <div class="qty-controls rating-stepper">
-                            <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaTodes', -1)">-</button>
+                            <button class="btn-qty" ${todesAtivo ? '' : 'disabled'} onclick="window.changePlayerNotaLocal('${p.id}', 'notaTodes', -1)">-</button>
                             <span class="level-num" id="ntodes-${p.id}">${notaBanco(p, "notaTodes")}</span>
-                            <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaTodes', 1)">+</button>
+                            <button class="btn-qty" ${todesAtivo ? '' : 'disabled'} onclick="window.changePlayerNotaLocal('${p.id}', 'notaTodes', 1)">+</button>
                         </div>
                     </div>
-                    <div class="rating-field"><label>ELAX</label>
+                    <div class="rating-field rating-modality ${elaxAtivo ? '' : 'is-disabled'}"><label class="rating-modality-label"><input type="checkbox" class="checkbox-control" ${elaxAtivo ? 'checked' : ''} onchange="window.setNewModalityStatus('${p.id}', 'notaElax', this.checked)"> ELAX</label>
                         <div class="qty-controls rating-stepper">
-                            <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaElax', -1)">-</button>
+                            <button class="btn-qty" ${elaxAtivo ? '' : 'disabled'} onclick="window.changePlayerNotaLocal('${p.id}', 'notaElax', -1)">-</button>
                             <span class="level-num" id="nelax-${p.id}">${notaBanco(p, "notaElax")}</span>
-                            <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaElax', 1)">+</button>
+                            <button class="btn-qty" ${elaxAtivo ? '' : 'disabled'} onclick="window.changePlayerNotaLocal('${p.id}', 'notaElax', 1)">+</button>
                         </div>
                     </div>
-                    <div class="rating-field allstar-rating-field" id="allstar-rating-${p.id}" style="${p.allStars ? '' : 'display:none;'}"><label>ALL STARS</label>
+                    <div class="rating-field rating-modality ${allStarsAtivo ? '' : 'is-disabled'}"><label class="rating-modality-label"><input type="checkbox" class="checkbox-control" ${allStarsAtivo ? 'checked' : ''} onchange="window.setNewModalityStatus('${p.id}', 'notaAllStars', this.checked)"> ALL STARS</label>
                         <div class="qty-controls rating-stepper">
-                            <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaAllStars', -1)">-</button>
+                            <button class="btn-qty" ${allStarsAtivo ? '' : 'disabled'} onclick="window.changePlayerNotaLocal('${p.id}', 'notaAllStars', -1)">-</button>
                             <span class="level-num" id="nstar-${p.id}">${notaBanco(p, "notaAllStars")}</span>
-                            <button class="btn-qty" onclick="window.changePlayerNotaLocal('${p.id}', 'notaAllStars', 1)">+</button>
+                            <button class="btn-qty" ${allStarsAtivo ? '' : 'disabled'} onclick="window.changePlayerNotaLocal('${p.id}', 'notaAllStars', 1)">+</button>
                         </div>
                     </div>
-                </div>
-                <div class="allstar-toggle-row">
-                    <input type="checkbox" id="star-${p.id}" ${p.allStars ? 'checked' : ''} onchange="window.setNewAllStarStatus('${p.id}', this.checked)"> 
-                    <label for="star-${p.id}">Marcar como All Star ⭐</label>
                 </div>
             `;
         }
@@ -369,7 +394,7 @@ window.setModoPendente = (playerId, modo) => {
 
 window.changePlayerNotaLocal = (playerId, tipo, delta) => {
     const p = players.find(x => x.id === playerId);
-    if (p) {
+    if (p && modalidadeAtiva(p, tipo)) {
         if (p[tipo] === undefined || p[tipo] === null || p[tipo] === "") p[tipo] = 3;
         p[tipo] = Math.max(0, Math.min(10, Number(p[tipo]) + delta));
         const idMap = { 'notaTodes': 'ntodes', 'notaElax': 'nelax', 'notaAllStars': 'nstar' };
@@ -378,13 +403,11 @@ window.changePlayerNotaLocal = (playerId, tipo, delta) => {
     }
 };
 
-window.setNewAllStarStatus = (id, v) => {
+window.setNewModalityStatus = (id, tipo, marcado) => {
     const p = players.find(x => x.id === id);
     if (p) {
-        p.allStars = v;
-        if (v && (p.notaAllStars === undefined || p.notaAllStars === null || p.notaAllStars === "")) p.notaAllStars = 3;
-        const campo = document.getElementById(`allstar-rating-${id}`);
-        if (campo) campo.style.display = v ? "" : "none";
+        definirModalidade(p, tipo, marcado);
+        atualizarUI();
     }
 };
 
@@ -434,11 +457,15 @@ window.cadastrarNovosEContinuar = async () => {
             p.notaTodes = notaBanco(p, "notaTodes");
             p.notaElax = notaBanco(p, "notaElax");
             p.notaAllStars = notaBanco(p, "notaAllStars", 0);
-            p.allStars = !!p.allStars;
+            p.todes = modalidadeAtiva(p, "notaTodes");
+            p.elax = modalidadeAtiva(p, "notaElax");
+            p.allStars = modalidadeAtiva(p, "notaAllStars");
             bancoPermanente[p.nome] = {
-                notaTodes: p.notaTodes,
-                notaElax: p.notaElax,
+                notaTodes: p.todes ? p.notaTodes : 0,
+                notaElax: p.elax ? p.notaElax : 0,
                 notaAllStars: p.allStars ? p.notaAllStars : 0,
+                todes: p.todes,
+                elax: p.elax,
                 allStars: p.allStars,
                 apelidos: ""
             };
@@ -464,7 +491,9 @@ function criarRascunhoNotas(player) {
         notaTodes: notaBanco(info, "notaTodes"),
         notaElax: notaBanco(info, "notaElax"),
         notaAllStars: notaBanco(info, "notaAllStars", 0),
-        allStars: info === player ? !!player.allStars : !!info.allStars
+        todes: modalidadeAtiva(info, "notaTodes"),
+        elax: modalidadeAtiva(info, "notaElax"),
+        allStars: modalidadeAtiva(info, "notaAllStars")
     };
 }
 
@@ -509,33 +538,29 @@ function renderTeams() {
                                 <button type="button" class="btn-lock ${p.locked ? 'locked' : ''}" onclick="window.toggleLock('${p.id}')">${p.locked ? '🔒' : '🔓'}</button>
                             </div>
                             <div class="team-player-edit-body ${aberto ? '' : 'hidden'}">
-                                <div class="checkbox-row team-player-allstars-toggle">
-                                    <input type="checkbox" id="team-allstars-${p.id}" class="checkbox-control" ${rascunho.allStars ? 'checked' : ''} onchange="window.toggleTeamPlayerAllStars('${p.id}', this.checked)">
-                                    <label for="team-allstars-${p.id}" class="checkbox-label">All Stars ⭐</label>
-                                </div>
-                                <div class="notas-grid-cadastro team-player-rating-grid ${rascunho.allStars ? 'has-allstars' : ''}">
-                                    <div class="nota-input-group">
-                                        <label>Todes</label>
+                                <div class="notas-grid-cadastro team-player-rating-grid">
+                                    <div class="nota-input-group rating-modality ${rascunho.todes ? '' : 'is-disabled'}">
+                                        <label class="rating-modality-label"><input type="checkbox" class="checkbox-control" ${rascunho.todes ? 'checked' : ''} onchange="window.toggleTeamPlayerModality('${p.id}', 'notaTodes', this.checked)"> Todes</label>
                                         <div class="qty-controls rating-stepper">
-                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaTodes', -1)">-</button>
+                                            <button type="button" class="btn-qty" ${rascunho.todes ? '' : 'disabled'} onclick="window.changeTeamPlayerNota('${p.id}', 'notaTodes', -1)">-</button>
                                             <span class="level-num" data-edit-note="notaTodes">${rascunho.notaTodes}</span>
-                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaTodes', 1)">+</button>
+                                            <button type="button" class="btn-qty" ${rascunho.todes ? '' : 'disabled'} onclick="window.changeTeamPlayerNota('${p.id}', 'notaTodes', 1)">+</button>
                                         </div>
                                     </div>
-                                    <div class="nota-input-group">
-                                        <label>Elax</label>
+                                    <div class="nota-input-group rating-modality ${rascunho.elax ? '' : 'is-disabled'}">
+                                        <label class="rating-modality-label"><input type="checkbox" class="checkbox-control" ${rascunho.elax ? 'checked' : ''} onchange="window.toggleTeamPlayerModality('${p.id}', 'notaElax', this.checked)"> Elax</label>
                                         <div class="qty-controls rating-stepper">
-                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaElax', -1)">-</button>
+                                            <button type="button" class="btn-qty" ${rascunho.elax ? '' : 'disabled'} onclick="window.changeTeamPlayerNota('${p.id}', 'notaElax', -1)">-</button>
                                             <span class="level-num" data-edit-note="notaElax">${rascunho.notaElax}</span>
-                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaElax', 1)">+</button>
+                                            <button type="button" class="btn-qty" ${rascunho.elax ? '' : 'disabled'} onclick="window.changeTeamPlayerNota('${p.id}', 'notaElax', 1)">+</button>
                                         </div>
                                     </div>
-                                    <div class="nota-input-group team-player-allstars-note ${rascunho.allStars ? '' : 'hidden'}">
-                                        <label>All Stars ⭐</label>
+                                    <div class="nota-input-group rating-modality team-player-allstars-note ${rascunho.allStars ? '' : 'is-disabled'}">
+                                        <label class="rating-modality-label"><input type="checkbox" class="checkbox-control" ${rascunho.allStars ? 'checked' : ''} onchange="window.toggleTeamPlayerModality('${p.id}', 'notaAllStars', this.checked)"> All Stars ⭐</label>
                                         <div class="qty-controls rating-stepper">
-                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaAllStars', -1)">-</button>
+                                            <button type="button" class="btn-qty" ${rascunho.allStars ? '' : 'disabled'} onclick="window.changeTeamPlayerNota('${p.id}', 'notaAllStars', -1)">-</button>
                                             <span class="level-num" data-edit-note="notaAllStars">${rascunho.notaAllStars}</span>
-                                            <button type="button" class="btn-qty" onclick="window.changeTeamPlayerNota('${p.id}', 'notaAllStars', 1)">+</button>
+                                            <button type="button" class="btn-qty" ${rascunho.allStars ? '' : 'disabled'} onclick="window.changeTeamPlayerNota('${p.id}', 'notaAllStars', 1)">+</button>
                                         </div>
                                     </div>
                                 </div>
@@ -606,7 +631,9 @@ function inicializarEventosTimes() {
                     notaTodes: dbP ? notaBanco(dbP, "notaTodes") : 3,
                     notaElax: dbP ? notaBanco(dbP, "notaElax") : 0,
                     notaAllStars: dbP ? notaBanco(dbP, "notaAllStars", 0) : 0,
-                    allStars: dbP ? !!dbP.allStars : false,
+                    todes: dbP ? modalidadeAtiva(dbP, "notaTodes") : true,
+                    elax: dbP ? modalidadeAtiva(dbP, "notaElax") : false,
+                    allStars: dbP ? modalidadeAtiva(dbP, "notaAllStars") : false,
                     locked: false
                 };
             }).filter(p => p.nome.length > 1);
@@ -667,26 +694,25 @@ window.changeTeamPlayerNota = (playerId, tipo, delta) => {
     const player = encontrarJogadorNosTimes(playerId);
     if (!player) return;
     const rascunho = obterRascunhoNotas(player);
+    if (!modalidadeAtiva(rascunho, tipo)) return;
     rascunho[tipo] = Math.max(0, Math.min(10, Number(rascunho[tipo] || 0) + Number(delta)));
     const card = encontrarCardJogador(playerId);
     const valor = card?.querySelector(`[data-edit-note="${tipo}"]`);
     if (valor) valor.innerText = String(rascunho[tipo]);
 };
 
-window.toggleTeamPlayerAllStars = (playerId, marcado) => {
+window.toggleTeamPlayerModality = (playerId, tipo, marcado) => {
     const player = encontrarJogadorNosTimes(playerId);
     if (!player) return;
     const rascunho = obterRascunhoNotas(player);
-    rascunho.allStars = !!marcado;
-    if (marcado && Number(rascunho.notaAllStars) === 0) rascunho.notaAllStars = 3;
+    definirModalidade(rascunho, tipo, marcado);
 
     const card = encontrarCardJogador(playerId);
-    const grid = card?.querySelector(".team-player-rating-grid");
-    const campo = card?.querySelector(".team-player-allstars-note");
-    const valor = campo?.querySelector('[data-edit-note="notaAllStars"]');
-    grid?.classList.toggle("has-allstars", !!marcado);
-    campo?.classList.toggle("hidden", !marcado);
-    if (valor) valor.innerText = String(rascunho.notaAllStars);
+    const valor = card?.querySelector(`[data-edit-note="${tipo}"]`);
+    const campo = valor?.closest(".rating-modality");
+    campo?.classList.toggle("is-disabled", !marcado);
+    campo?.querySelectorAll(".btn-qty").forEach(botao => { botao.disabled = !marcado; });
+    if (valor) valor.innerText = String(rascunho[tipo]);
 };
 
 window.salvarNotasJogadorTime = async (playerId) => {
@@ -698,9 +724,11 @@ window.salvarNotasJogadorTime = async (playerId) => {
     const anterior = bancoPermanente[nomeOficial] || {};
     const dadosAtualizados = {
         ...anterior,
-        notaTodes: rascunho.notaTodes,
-        notaElax: rascunho.notaElax,
+        notaTodes: rascunho.todes ? rascunho.notaTodes : 0,
+        notaElax: rascunho.elax ? rascunho.notaElax : 0,
         notaAllStars: rascunho.allStars ? rascunho.notaAllStars : 0,
+        todes: rascunho.todes,
+        elax: rascunho.elax,
         allStars: rascunho.allStars
     };
 
@@ -712,6 +740,8 @@ window.salvarNotasJogadorTime = async (playerId) => {
         item.notaTodes = dadosAtualizados.notaTodes;
         item.notaElax = dadosAtualizados.notaElax;
         item.notaAllStars = dadosAtualizados.notaAllStars;
+        item.todes = dadosAtualizados.todes;
+        item.elax = dadosAtualizados.elax;
         item.allStars = dadosAtualizados.allStars;
     };
     players.forEach(atualizarFotoJogador);

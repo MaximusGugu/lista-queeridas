@@ -1,0 +1,131 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isGoogleVerified() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function isAnonymous() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function isMaster() {
+      return isGoogleVerified()
+        && exists(/databases/$(database)/documents/acessos_master/$(request.auth.token.email));
+    }
+
+    function isAdmin() {
+      return isGoogleVerified()
+        && (isMaster()
+          || exists(/databases/$(database)/documents/acessos_adm/$(request.auth.token.email)));
+    }
+
+    match /acessos_master/{email} {
+      allow get: if isGoogleVerified()
+        && (request.auth.token.email == email || isMaster());
+      allow list: if isMaster();
+      allow create, update, delete: if false;
+    }
+
+    match /acessos_adm/{email} {
+      allow get: if isGoogleVerified()
+        && (request.auth.token.email == email || isMaster());
+      allow list: if isMaster();
+      allow create: if isMaster()
+        && email == request.resource.data.email
+        && request.resource.data.keys().hasOnly(['email', 'criadoPor', 'criadoEm'])
+        && request.resource.data.email is string
+        && request.resource.data.email.matches('^[^/\\s@]+@[^/\\s@]+\\.[^/\\s@]+$')
+        && request.resource.data.criadoPor == request.auth.token.email
+        && request.resource.data.criadoEm == request.time;
+      allow update: if isMaster()
+        && request.resource.data.keys().hasOnly([
+          'email', 'criadoPor', 'criadoEm',
+          'jogadorBanco', 'vinculadoPor', 'vinculadoEm'
+        ])
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.criadoPor == resource.data.criadoPor
+        && request.resource.data.criadoEm == resource.data.criadoEm
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['jogadorBanco', 'vinculadoPor', 'vinculadoEm'])
+        && request.resource.data.jogadorBanco is string
+        && request.resource.data.jogadorBanco.size() <= 160
+        && request.resource.data.vinculadoPor == request.auth.token.email
+        && request.resource.data.vinculadoEm == request.time;
+      allow delete: if isMaster();
+    }
+
+    match /sistema/{documento} {
+      allow read, write: if isAdmin();
+    }
+
+    match /formularios_publicos/{formularioId} {
+      function validAnonymousCounterUpdate() {
+        return isAnonymous()
+          && resource.data.vigente == true
+          && resource.data.aberto == true
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['contadorInscricoes', 'ultimaInscricaoId', 'ultimaInscricaoUid'])
+          && request.resource.data.contadorInscricoes == resource.data.contadorInscricoes + 1
+          && request.resource.data.ultimaInscricaoId is string
+          && request.resource.data.ultimaInscricaoId.size() > 0
+          && request.resource.data.ultimaInscricaoUid == request.auth.uid;
+      }
+
+      // O link individual do formulário é público; listar todos os formulários é administrativo.
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || validAnonymousCounterUpdate();
+
+      match /inscricoes/{inscricaoId} {
+        function formularioAtual() {
+          return get(/databases/$(database)/documents/formularios_publicos/$(formularioId));
+        }
+
+        function formularioDepois() {
+          return getAfter(/databases/$(database)/documents/formularios_publicos/$(formularioId));
+        }
+
+        function validAnonymousRegistration() {
+          return isAnonymous()
+            && formularioAtual().data.vigente == true
+            && formularioAtual().data.aberto == true
+            && formularioDepois().data.ultimaInscricaoId == inscricaoId
+            && formularioDepois().data.ultimaInscricaoUid == request.auth.uid
+            && request.resource.data.keys().hasOnly([
+              'inscricaoId', 'formularioToken', 'listaId', 'nome', 'email',
+              'posicao', 'status', 'autorUid', 'criadoEm', 'sincronizada'
+            ])
+            && request.resource.data.inscricaoId == inscricaoId
+            && request.resource.data.formularioToken == formularioId
+            && request.resource.data.listaId == formularioAtual().data.listaId
+            && request.resource.data.nome is string
+            && request.resource.data.nome.size() > 0
+            && request.resource.data.nome.size() <= 120
+            && request.resource.data.email is string
+            && request.resource.data.email.size() > 3
+            && request.resource.data.email.size() <= 254
+            && request.resource.data.posicao is int
+            && request.resource.data.posicao > 0
+            && request.resource.data.status in ['principal', 'espera']
+            && request.resource.data.autorUid == request.auth.uid
+            && request.resource.data.criadoEm == request.time
+            && request.resource.data.sincronizada == false;
+        }
+
+        allow read, update, delete: if isAdmin();
+        allow create: if isAdmin() || validAnonymousRegistration();
+      }
+    }
+
+    match /{documento=**} {
+      allow read, write: if false;
+    }
+  }
+}

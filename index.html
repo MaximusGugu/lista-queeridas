@@ -192,40 +192,29 @@
                 </div>
             </div>
 
-            <div class="person-flags-row modal-checkbox-row">
-                <div class="checkbox-row">
-                    <input type="checkbox" id="duplicateBankAllStars" class="checkbox-control">
-                    <label for="duplicateBankAllStars" class="checkbox-label">All Stars ⭐</label>
-                </div>
-                <div class="checkbox-row">
-                    <input type="checkbox" id="duplicateBankAdm" class="checkbox-control">
-                    <label for="duplicateBankAdm" class="checkbox-label">Adm</label>
-                </div>
-            </div>
-
             <div class="notas-grid-cadastro duplicate-bank-ratings">
-                <div class="nota-input-group">
-                    <label>Todes</label>
+                <div class="nota-input-group rating-modality">
+                    <label class="rating-modality-label"><input type="checkbox" id="duplicateBankTodesActive" class="checkbox-control" checked> Todes</label>
                     <div class="qty-controls rating-stepper">
                         <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankTodes" data-delta="-1">-</button>
                         <span id="duplicateBankTodes" class="level-num">3</span>
                         <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankTodes" data-delta="1">+</button>
                     </div>
                 </div>
-                <div class="nota-input-group">
-                    <label>Elax</label>
+                <div class="nota-input-group rating-modality is-disabled">
+                    <label class="rating-modality-label"><input type="checkbox" id="duplicateBankElaxActive" class="checkbox-control"> Elax</label>
                     <div class="qty-controls rating-stepper">
-                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankElax" data-delta="-1">-</button>
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankElax" data-delta="-1" disabled>-</button>
                         <span id="duplicateBankElax" class="level-num">0</span>
-                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankElax" data-delta="1">+</button>
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankElax" data-delta="1" disabled>+</button>
                     </div>
                 </div>
-                <div id="duplicateBankAllStarsGroup" class="nota-input-group span-2 hidden">
-                    <label>All Stars ⭐</label>
+                <div id="duplicateBankAllStarsGroup" class="nota-input-group rating-modality is-disabled">
+                    <label class="rating-modality-label"><input type="checkbox" id="duplicateBankAllStars" class="checkbox-control"> All Stars ⭐</label>
                     <div class="qty-controls rating-stepper">
-                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankAllStarsNote" data-delta="-1">-</button>
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankAllStarsNote" data-delta="-1" disabled>-</button>
                         <span id="duplicateBankAllStarsNote" class="level-num">0</span>
-                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankAllStarsNote" data-delta="1">+</button>
+                        <button type="button" class="btn-qty duplicate-note-btn" data-target="duplicateBankAllStarsNote" data-delta="1" disabled>+</button>
                     </div>
                 </div>
             </div>
@@ -248,7 +237,7 @@
     </div>
 </div>
 
-    <script src="load-navbar.js"></script>
+    <script type="module" src="load-navbar.js"></script>
     <script type="module" src="app.js?v=20260711-6"></script>
 </body>
 </html>

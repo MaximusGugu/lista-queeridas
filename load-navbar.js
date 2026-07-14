@@ -1,3 +1,6 @@
+import { auth, onAuthStateChanged } from "./firebase-config.js";
+import { encerrarSessao, obterPerfilAcesso, PAPEL_MASTER } from "./access-control.js";
+
 async function injectNavbar() {
     try {
         const response = await fetch("navbar.html");
@@ -5,18 +8,33 @@ async function injectNavbar() {
         const navbarHtml = await response.text();
         document.body.insertAdjacentHTML("beforeend", navbarHtml);
 
-        const path = window.location.pathname;
-        const page = path.split("/").pop();
+        const page = window.location.pathname.split("/").pop();
+        const idsPorPagina = {
+            "": "nav-index",
+            "index.html": "nav-index",
+            "times.html": "nav-times",
+            "jogadores.html": "nav-jogadores",
+            "acessos.html": "nav-acessos"
+        };
+        document.getElementById(idsPorPagina[page])?.classList.add("active");
+        document.getElementById("btnNavLogout").onclick = () => encerrarSessao();
 
-        if (page === "index.html" || page === "") {
-            document.getElementById("nav-index")?.classList.add("active");
-        } else if (page === "times.html") {
-            document.getElementById("nav-times")?.classList.add("active");
-        } else if (page === "jogadores.html") {
-            document.getElementById("nav-jogadores")?.classList.add("active");
-        }
-    } catch (err) {
-        console.warn("Não foi possível carregar a navbar:", err);
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) return;
+            try {
+                const perfil = await obterPerfilAcesso(user);
+                const nav = document.querySelector(".bottom-nav");
+                const linkAcessos = document.getElementById("nav-acessos");
+                const master = perfil?.papel === PAPEL_MASTER;
+                linkAcessos?.classList.toggle("hidden", !master);
+                nav?.classList.toggle("has-master-access", master);
+                nav?.setAttribute("data-user-email", perfil?.email || "");
+            } catch (error) {
+                console.warn("Não foi possível montar a navegação do usuário:", error);
+            }
+        });
+    } catch (error) {
+        console.warn("Não foi possível carregar a navbar:", error);
     }
 }
 
