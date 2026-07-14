@@ -45,14 +45,27 @@
             <div id="msgListaFechada" class="closed-message"></div>
 
             <div class="form-body" id="formBody">
-                <form id="formInscricao">
+                <div id="publicAuthGate" class="public-auth-gate">
+                    <h2>Entre para se inscrever</h2>
+                    <p>Use sua conta Google. Você continuará conectado neste navegador nas próximas inscrições.</p>
+                    <button id="btnPublicGoogleLogin" class="btn-google-login" type="button">
+                        <span class="google-mark" aria-hidden="true">G</span>
+                        <span>Continuar com Google</span>
+                    </button>
+                    <p id="publicAuthMessage" class="login-message hidden" role="alert"></p>
+                </div>
+
+                <form id="formInscricao" class="hidden">
                     <div class="campo">
                         <label>Nome Completo:</label>
                         <input type="text" id="iptNome" class="input-text" placeholder="Qual seu nome no WhatsApp" required>
                     </div>
                     <div class="campo">
                         <label>E-mail:</label>
-                        <input type="email" id="iptEmail" class="input-text" placeholder="Para controle da lista" required>
+                        <div class="public-account-row">
+                            <input type="email" id="iptEmail" class="input-text public-email-input" readonly aria-readonly="true">
+                            <button id="btnSwitchPublicAccount" class="btn-link-subtle public-switch-account" type="button">Trocar conta</button>
+                        </div>
                     </div>
                     <button type="submit" id="btnSubmit" class="btn-enviar">ENVIAR MINHA INSCRIÇÃO</button>
                 </form>
@@ -68,7 +81,7 @@
     </div>
 
     <script type="module">
-        import { auth, collection, db, doc, onSnapshot, runTransaction, serverTimestamp, signInAnonymously } from "./firebase-config.js";
+        import { auth, authPersistenceReady, collection, db, doc, GoogleAuthProvider, onAuthStateChanged, onSnapshot, runTransaction, serverTimestamp, signInWithPopup, signOut } from "./firebase-config.js";
 
         const params = new URLSearchParams(window.location.search);
         const identificadorPublico = params.get('lista') || '';
@@ -79,14 +92,78 @@
         const BANNER_PADRAO_URL = "https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png";
         const DIAS_ANTES_ABERTURA_PADRAO = 1;
         const HORARIO_ABERTURA_PADRAO = "12h30";
+        const authGate = document.getElementById('publicAuthGate');
+        const authMessage = document.getElementById('publicAuthMessage');
+        const formInscricao = document.getElementById('formInscricao');
+        const inputEmail = document.getElementById('iptEmail');
+        const btnGoogle = document.getElementById('btnPublicGoogleLogin');
+        const btnTrocarConta = document.getElementById('btnSwitchPublicAccount');
+        let loginEmAndamento = false;
+
+        function usuarioGoogleValido(user) {
+            return !!user
+                && !user.isAnonymous
+                && !!user.email
+                && user.emailVerified
+                && (user.providerData || []).some(provider => provider.providerId === 'google.com');
+        }
+
+        function mostrarMensagemAuth(texto) {
+            authMessage.textContent = texto || '';
+            authMessage.className = `login-message ${texto ? 'is-erro' : 'hidden'}`;
+        }
+
+        function mensagemErroGoogle(error) {
+            if (error?.code === 'auth/popup-closed-by-user') return 'Login cancelado. Tente novamente.';
+            if (error?.code === 'auth/popup-blocked') return 'O navegador bloqueou a janela do Google. Permita pop-ups e tente novamente.';
+            if (error?.code === 'auth/cancelled-popup-request') return 'Já existe uma tentativa de login aberta.';
+            if (error?.code === 'auth/network-request-failed') return 'Sem conexão com o Google. Verifique sua internet.';
+            return 'Não foi possível entrar com o Google.';
+        }
+
+        function atualizarEstadoAutenticacao(user = auth.currentUser) {
+            const autenticado = usuarioGoogleValido(user);
+            const formularioAberto = !!formularioAtual?.aberto;
+            authGate.classList.toggle('hidden', !formularioAberto || autenticado);
+            formInscricao.classList.toggle('hidden', !formularioAberto || !autenticado);
+            inputEmail.value = autenticado ? user.email : '';
+        }
+
+        async function entrarComGoogle() {
+            if (loginEmAndamento) return;
+            loginEmAndamento = true;
+            btnGoogle.disabled = true;
+            btnTrocarConta.disabled = true;
+            mostrarMensagemAuth('');
+            try {
+                await authPersistenceReady;
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
+                const resultado = await signInWithPopup(auth, provider);
+                if (!usuarioGoogleValido(resultado.user)) throw new Error('CONTA_GOOGLE_INVALIDA');
+                atualizarEstadoAutenticacao(resultado.user);
+            } catch (error) {
+                console.error('Falha no login Google do formulário:', error);
+                mostrarMensagemAuth(mensagemErroGoogle(error));
+            } finally {
+                loginEmAndamento = false;
+                btnGoogle.disabled = false;
+                btnTrocarConta.disabled = false;
+            }
+        }
+
+        btnGoogle.onclick = entrarComGoogle;
+        btnTrocarConta.onclick = entrarComGoogle;
+        onAuthStateChanged(auth, user => atualizarEstadoAutenticacao(user));
 
         async function iniciarFormularioPublico() {
             if (!formularioRef) {
                 renderLinkInvalido();
                 return;
             }
+            await authPersistenceReady;
             if (typeof auth.authStateReady === "function") await auth.authStateReady();
-            if (!auth.currentUser) await signInAnonymously(auth);
+            if (auth.currentUser?.isAnonymous) await signOut(auth);
             onSnapshot(formularioRef, (snap) => {
                 if (!snap.exists() || !snap.data().vigente) {
                     formularioAtual = null;
@@ -96,6 +173,7 @@
                 formularioAtual = snap.data();
                 idLista = formularioAtual.listaId;
                 renderForm(formularioAtual);
+                atualizarEstadoAutenticacao();
             }, error => {
                 console.error("Falha ao carregar formulário público:", error);
                 renderLinkInvalido("Não foi possível carregar este formulário.");
@@ -224,17 +302,21 @@
             return data.toLocaleDateString('pt-BR', { weekday: 'long' });
         }
 
-        document.getElementById('formInscricao').onsubmit = async (e) => {
+        formInscricao.onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btnSubmit');
             btn.disabled = true;
+            btnTrocarConta.disabled = true;
             btn.innerText = "PROCESSANDO...";
 
             try {
-                if (!formularioRef || !auth.currentUser || !formularioAtual) throw new Error("LINK_EXPIRADO");
+                if (!formularioRef || !formularioAtual) throw new Error("LINK_EXPIRADO");
+                const usuario = auth.currentUser;
+                if (!usuarioGoogleValido(usuario)) throw new Error("LOGIN_NECESSARIO");
                 const inscricaoRef = doc(collection(formularioRef, "inscricoes"));
                 const nome = document.getElementById('iptNome').value.trim();
-                const email = document.getElementById('iptEmail').value.trim();
+                const email = usuario.email;
+                const autorUid = usuario.uid;
                 await runTransaction(db, async transaction => {
                     const formularioSnap = await transaction.get(formularioRef);
                     if (!formularioSnap.exists() || !formularioSnap.data().vigente) throw new Error("LINK_EXPIRADO");
@@ -254,14 +336,14 @@
                         email,
                         posicao,
                         status,
-                        autorUid: auth.currentUser.uid,
+                        autorUid,
                         criadoEm: serverTimestamp(),
                         sincronizada: false
                     });
                     transaction.update(formularioRef, {
                         contadorInscricoes,
                         ultimaInscricaoId: inscricaoId,
-                        ultimaInscricaoUid: auth.currentUser.uid
+                        ultimaInscricaoUid: autorUid
                     });
                 });
 
@@ -272,6 +354,9 @@
             } catch (err) {
                 if (err.message === "LINK_EXPIRADO") {
                     renderLinkInvalido();
+                } else if (err.message === "LOGIN_NECESSARIO") {
+                    atualizarEstadoAutenticacao();
+                    mostrarMensagemAuth("Entre novamente com o Google para concluir a inscrição.");
                 } else if (err.message === "FORMULARIO_FECHADO") {
                     if (formularioAtual) renderForm({ ...formularioAtual, aberto: false });
                 } else {
@@ -279,7 +364,8 @@
                     alert("Erro ao salvar. Tente novamente.");
                 }
                 btn.disabled = false;
-                btn.innerText = "ENVIAR";
+                btnTrocarConta.disabled = false;
+                btn.innerText = "ENVIAR MINHA INSCRIÇÃO";
             }
         };
     </script>

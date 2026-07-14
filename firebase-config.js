@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInAnonymously, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { browserLocalPersistence, getAuth, GoogleAuthProvider, onAuthStateChanged, setPersistence, signInAnonymously, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -14,8 +14,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch(error => {
+  console.warn("Não foi possível ativar a persistência local da autenticação:", error);
+});
 
-// O formulário usa autenticação anônima; as demais telas exigem uma conta administrativa.
+// O formulário aceita uma conta Google comum; as demais telas exigem uma conta administrativa.
 const paginaAtual = window.location.pathname.split("/").pop();
 const paginaPublica = paginaAtual === "form.html" || paginaAtual === "login.html";
 if (!paginaPublica) {
@@ -26,6 +29,8 @@ if (!paginaPublica) {
 
 export {
   auth,
+  authPersistenceReady,
+  browserLocalPersistence,
   db,
   collection,
   collectionGroup,
@@ -39,6 +44,7 @@ export {
   query,
   runTransaction,
   serverTimestamp,
+  setPersistence,
   setDoc,
   signInAnonymously,
   signInWithPopup,
