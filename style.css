@@ -510,6 +510,8 @@ body.modal-open { position: fixed; left: 0; right: 0; width: 100%; overflow: hid
 .action-bar-primary { margin: 10px 0 16px; }
 .action-bar-secondary { margin: 10px 0 12px; }
 .action-bar-footer { margin: 20px 0 10px; padding-bottom: 0; }
+.individual-add-zone { margin: 16px 0 0; }
+.individual-add-zone .btn { width: 100%; }
 .danger-zone { margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,71,87,0.35); }
 .danger-zone .btn { width: 100%; }
 .duplicate-review:empty { display: none; }

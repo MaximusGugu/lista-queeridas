@@ -563,7 +563,21 @@ function renderLista(listaAtual, limite, adm) {
 // --- 5. FUNÇÕES DE SUPORTE ---
 function limparNomeImportado(linha) {
     return (linha || "")
-        .replace(/^\s*\d+\s*[-.)]?\s*/, "")
+        .replace(/^\s*\d+\s*(?:[-\u2013\u2014.)]\s*|\s+)/u, "")
+        .replace(/\*/g, "")
+        .replace(/[\u2705\u2713\u2714\u2611\uFE0E\uFE0F]/g, "")
+        .replace(/[\u200B-\u200D]/g, "")
+        .replace(/^[\s\-\u2013\u2014.)\u2022\u00B7]+|[\s\-\u2013\u2014\u2022\u00B7]+$/gu, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function nomeImportadoValido(nome) {
+    return typeof nome === "string" && /[\p{L}\p{N}]/u.test(nome);
+}
+
+function limparNomeDigitado(nome) {
+    return String(nome || "")
         .replace(/[\u2705\u2713\u2714\u2611\uFE0E\uFE0F]/g, "")
         .replace(/[\u200B-\u200D]/g, "")
         .replace(/\s+/g, " ")
@@ -572,8 +586,11 @@ function limparNomeImportado(linha) {
 
 function extrairLinhasImportadas(texto) {
     const linhas = (texto || "").split(/\r?\n/);
-    const linhaNumerada = /^\s*\d+\s*(?:[-\u2013\u2014.)]\s*|\s+)(.+?)\s*$/u;
-    const possuiNumeracao = linhas.some(linha => linhaNumerada.test(linha));
+    const linhaNumerada = /^\s*\d+\s*(?:[-\u2013\u2014.)]\s*|\s+)(.*?)\s*$/u;
+    const possuiNumeracao = linhas.some(linha => {
+        const match = linha.match(linhaNumerada);
+        return !!match && nomeImportadoValido(limparNomeImportado(match[1]));
+    });
 
     return linhas.reduce((resultado, linha) => {
         const match = linha.match(linhaNumerada);
@@ -584,7 +601,7 @@ function extrairLinhasImportadas(texto) {
         if (!semMarcacao || /^lista\s+de\s+espera\b/iu.test(semMarcacao)) return resultado;
 
         const nome = limparNomeImportado(conteudo);
-        if (!nome) return resultado;
+        if (!nomeImportadoValido(nome)) return resultado;
 
         resultado.push({
             nome,
@@ -995,6 +1012,33 @@ function processarLinhaImportada(item) {
     };
 }
 
+function mesclarJogadoresImportados(jogadoresAtuais, itensImportados) {
+    const atuais = Array.isArray(jogadoresAtuais) ? jogadoresAtuais : [];
+    const indicesUtilizados = new Set();
+
+    const jogadoresImportados = itensImportados.map(item => {
+        const indiceExistente = atuais.findIndex((jogador, indice) => {
+            if (indicesUtilizados.has(indice) || !jogador?.nome?.trim()) return false;
+            return nomesEquivalentes(jogador.nome, item.nome);
+        });
+
+        if (indiceExistente === -1) return processarLinhaImportada(item);
+
+        indicesUtilizados.add(indiceExistente);
+        const existente = atuais[indiceExistente];
+        return {
+            ...existente,
+            pago: Boolean(existente.pago || item.pago)
+        };
+    });
+
+    const jogadoresAntigosRestantes = atuais.filter((jogador, indice) =>
+        !indicesUtilizados.has(indice) && jogador?.nome?.trim()
+    );
+
+    return [...jogadoresImportados, ...jogadoresAntigosRestantes];
+}
+
 function calcularQuantidadeTimesSugerida(totalJogadores) {
     if (totalJogadores <= 0) return 2;
     return Math.max(2, Math.min(5, Math.round(totalJogadores / 7)));
@@ -1189,18 +1233,68 @@ function inicializarEventosBotoes() {
     };
 
     document.getElementById("btnOpenImport").onclick = () => window.abrirModal('modalImport');
-    document.getElementById("btnConfirmarImport").onclick = () => {
+    document.getElementById("btnConfirmarImport").onclick = async () => {
         const t = document.getElementById("textoNomesBulk").value.trim();
         if (t) {
-            const adm = db_local.listas[aba_ativa].config.adm;
+            const listaAtual = db_local.listas[aba_ativa];
+            const adm = listaAtual.config.adm;
             const itens = extrairLinhasImportadas(t);
             if (itens.length && nomesEquivalentes(itens[0].nome, adm)) itens.shift();
-            db_local.listas[aba_ativa].jogadores = itens.map(processarLinhaImportada);
-            db_local.listas[aba_ativa].duplicidadesIgnoradas = [];
-            salvar();
+            if (!itens.length) {
+                alert("Nenhum nome válido foi encontrado.");
+                return;
+            }
+            listaAtual.jogadores = mesclarJogadoresImportados(listaAtual.jogadores, itens);
+            document.getElementById("textoNomesBulk").value = "";
+            await salvar();
+            render();
         }
         window.fecharModal('modalImport');
     };
+    const btnOpenIndividual = document.getElementById("btnOpenIndividual");
+    const btnConfirmarIndividual = document.getElementById("btnConfirmarIndividual");
+    const inputNomeIndividual = document.getElementById("nomeIndividual");
+
+    if (btnOpenIndividual && btnConfirmarIndividual && inputNomeIndividual) {
+        btnOpenIndividual.onclick = () => {
+            inputNomeIndividual.value = "";
+            window.abrirModal("modalAddIndividual");
+            setTimeout(() => inputNomeIndividual.focus(), 0);
+        };
+
+        const adicionarNomeIndividual = async () => {
+            const nome = limparNomeDigitado(inputNomeIndividual.value);
+            if (!nomeImportadoValido(nome)) {
+                alert("Digite um nome válido.");
+                inputNomeIndividual.focus();
+                return;
+            }
+
+            const listaAtual = db_local.listas[aba_ativa];
+            if (nomesEquivalentes(nome, listaAtual.config.adm)) {
+                alert("Essa pessoa já está como ADM da lista.");
+                inputNomeIndividual.focus();
+                return;
+            }
+
+            btnConfirmarIndividual.disabled = true;
+            try {
+                listaAtual.jogadores.push(processarLinhaImportada({ nome, pago: false }));
+                await salvar();
+                render();
+                window.fecharModal("modalAddIndividual");
+            } finally {
+                btnConfirmarIndividual.disabled = false;
+            }
+        };
+
+        btnConfirmarIndividual.onclick = adicionarNomeIndividual;
+        inputNomeIndividual.onkeydown = event => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            adicionarNomeIndividual();
+        };
+    }
     document.getElementById("btnClearAll").onclick = () => {
         if(confirm("Limpar lista?")) {
             const deveManterNumeros = aba_ativa === "ELAX_QUINTA" || aba_ativa === "PRAIA_DOMINGO";
