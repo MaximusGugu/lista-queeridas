@@ -10,12 +10,12 @@
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/favicon.png" />
     <title>Inscrição - Queeridas Volleyball</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260723-1">
     <script src="standalone-navigation.js" defer></script>
 </head>
 <body class="public-form-page">
     <div class="form-container">
-        <img src="https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png" alt="Banner Queeridas" class="banner" id="imgBanner">
+        <img src="https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.webp" alt="Banner Queeridas" class="banner" id="imgBanner" fetchpriority="high" decoding="async">
         
         <div id="corpoForm">
             <div class="header-info">
@@ -45,7 +45,7 @@
             <div id="msgListaFechada" class="closed-message"></div>
 
             <div class="form-body" id="formBody">
-                <div id="publicAuthGate" class="public-auth-gate">
+                <div id="publicAuthGate" class="public-auth-gate hidden">
                     <h2>Entre para se inscrever</h2>
                     <p>Use sua conta Google. Você continuará conectado neste navegador nas próximas inscrições.</p>
                     <button id="btnPublicGoogleLogin" class="btn-google-login" type="button">
@@ -87,11 +87,21 @@
         const identificadorPublico = params.get('lista') || '';
         let idLista = null;
         let formularioAtual = null;
+        let authResolvido = false;
+        let dadosConfirmados = false;
+        let cacheExibido = false;
         const formularioRef = identificadorPublico ? doc(db, "formularios_publicos", identificadorPublico) : null;
         const LINK_GRUPO_PADRAO = "https://chat.whatsapp.com/JWHNWnWC8N5IFrpNEwEtii";
-        const BANNER_PADRAO_URL = "https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.png";
+        const BANNER_PADRAO_URL = "https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/banner_padrao.webp";
         const DIAS_ANTES_ABERTURA_PADRAO = 1;
         const HORARIO_ABERTURA_PADRAO = "12h30";
+        const CACHE_FORM_PREFIXO = "queeridas_form_publico_cache_v1:";
+        const CACHE_FORM_VALIDADE_MS = 7 * 24 * 60 * 60 * 1000;
+        const TIMEOUT_CONFIRMACAO_MS = 12000;
+        const CAMPOS_PUBLICOS_CACHE = [
+            "nomeJogo", "data", "dia", "inicio", "fim", "quadra", "valorTexto",
+            "textoApoio", "mapaLink", "grupoLink", "abreDiasAntes", "abreHorario"
+        ];
         const authGate = document.getElementById('publicAuthGate');
         const authMessage = document.getElementById('publicAuthMessage');
         const formInscricao = document.getElementById('formInscricao');
@@ -99,6 +109,62 @@
         const btnGoogle = document.getElementById('btnPublicGoogleLogin');
         const btnTrocarConta = document.getElementById('btnSwitchPublicAccount');
         let loginEmAndamento = false;
+
+        function chaveCacheFormulario() {
+            return identificadorPublico ? `${CACHE_FORM_PREFIXO}${identificadorPublico}` : "";
+        }
+
+        function limparCacheFormulario() {
+            const chave = chaveCacheFormulario();
+            if (!chave) return;
+            try {
+                localStorage.removeItem(chave);
+            } catch (error) {
+                console.warn("Não foi possível limpar o cache do formulário:", error);
+            }
+        }
+
+        function carregarCacheFormulario() {
+            const chave = chaveCacheFormulario();
+            if (!chave) return null;
+            try {
+                const salvo = JSON.parse(localStorage.getItem(chave) || "null");
+                const expirado = !salvo?.salvoEm
+                    || Date.now() - Number(salvo.salvoEm) > CACHE_FORM_VALIDADE_MS;
+                const dadosValidos = salvo?.dados
+                    && typeof salvo.dados === "object"
+                    && typeof salvo.dados.nomeJogo === "string";
+                if (expirado || !dadosValidos) {
+                    localStorage.removeItem(chave);
+                    return null;
+                }
+                return salvo.dados;
+            } catch (error) {
+                console.warn("Não foi possível ler o cache do formulário:", error);
+                limparCacheFormulario();
+                return null;
+            }
+        }
+
+        function extrairDadosPublicosCache(cfg) {
+            return CAMPOS_PUBLICOS_CACHE.reduce((dados, campo) => {
+                if (cfg[campo] !== undefined && cfg[campo] !== null) dados[campo] = cfg[campo];
+                return dados;
+            }, {});
+        }
+
+        function salvarCacheFormulario(cfg) {
+            const chave = chaveCacheFormulario();
+            if (!chave) return;
+            try {
+                const dados = extrairDadosPublicosCache(cfg);
+                const anterior = JSON.parse(localStorage.getItem(chave) || "null");
+                if (anterior?.dados && JSON.stringify(anterior.dados) === JSON.stringify(dados)) return;
+                localStorage.setItem(chave, JSON.stringify({ salvoEm: Date.now(), dados }));
+            } catch (error) {
+                console.warn("Não foi possível atualizar o cache do formulário:", error);
+            }
+        }
 
         function usuarioGoogleValido(user) {
             return !!user
@@ -123,10 +189,12 @@
 
         function atualizarEstadoAutenticacao(user = auth.currentUser) {
             const autenticado = usuarioGoogleValido(user);
-            const formularioAberto = !!formularioAtual?.aberto;
+            const formularioAberto = dadosConfirmados
+                && authResolvido
+                && !!formularioAtual?.aberto;
             authGate.classList.toggle('hidden', !formularioAberto || autenticado);
             formInscricao.classList.toggle('hidden', !formularioAberto || !autenticado);
-            inputEmail.value = autenticado ? user.email : '';
+            inputEmail.value = formularioAberto && autenticado ? user.email : '';
         }
 
         async function entrarComGoogle() {
@@ -156,36 +224,72 @@
         btnTrocarConta.onclick = entrarComGoogle;
         onAuthStateChanged(auth, user => atualizarEstadoAutenticacao(user));
 
-        async function iniciarFormularioPublico() {
+        function iniciarFormularioPublico() {
             if (!formularioRef) {
                 renderLinkInvalido();
                 return;
             }
-            await authPersistenceReady;
-            if (typeof auth.authStateReady === "function") await auth.authStateReady();
-            if (auth.currentUser?.isAnonymous) await signOut(auth);
-            onSnapshot(formularioRef, (snap) => {
+
+            const cache = carregarCacheFormulario();
+            if (cache) {
+                cacheExibido = true;
+                renderFormProvisorio(cache);
+            }
+
+            const timerConfirmacao = window.setTimeout(() => {
+                if (!dadosConfirmados) renderFalhaAtualizacao();
+            }, TIMEOUT_CONFIRMACAO_MS);
+
+            onSnapshot(formularioRef, { includeMetadataChanges: true }, (snap) => {
+                if (snap.metadata.fromCache) {
+                    if (!dadosConfirmados && snap.exists() && snap.data().vigente) {
+                        cacheExibido = true;
+                        renderFormProvisorio(extrairDadosPublicosCache(snap.data()));
+                    }
+                    return;
+                }
+
+                window.clearTimeout(timerConfirmacao);
                 if (!snap.exists() || !snap.data().vigente) {
-                    formularioAtual = null;
                     renderLinkInvalido();
                     return;
                 }
+                dadosConfirmados = true;
                 formularioAtual = snap.data();
                 idLista = formularioAtual.listaId;
+                salvarCacheFormulario(formularioAtual);
+                cacheExibido = true;
                 renderForm(formularioAtual);
                 atualizarEstadoAutenticacao();
             }, error => {
+                window.clearTimeout(timerConfirmacao);
                 console.error("Falha ao carregar formulário público:", error);
-                renderLinkInvalido("Não foi possível carregar este formulário.");
+                renderFalhaAtualizacao();
             });
         }
 
-        iniciarFormularioPublico().catch(error => {
-            console.error("Falha na autenticação pública:", error);
-            renderLinkInvalido("Não foi possível iniciar a inscrição.");
-        });
+        async function iniciarAutenticacaoPublica() {
+            try {
+                await authPersistenceReady;
+                if (typeof auth.authStateReady === "function") await auth.authStateReady();
+                if (auth.currentUser?.isAnonymous) await signOut(auth);
+            } catch (error) {
+                console.error("Falha na autenticação pública:", error);
+                mostrarMensagemAuth("Não foi possível restaurar seu login. Tente entrar com o Google.");
+            } finally {
+                authResolvido = true;
+                atualizarEstadoAutenticacao();
+            }
+        }
+
+        iniciarFormularioPublico();
+        iniciarAutenticacaoPublica();
 
         function renderLinkInvalido(texto = "Peça à organização o link atual do formulário.") {
+            formularioAtual = null;
+            dadosConfirmados = true;
+            cacheExibido = false;
+            limparCacheFormulario();
             document.getElementById('tagStatus').innerText = "● LINK EXPIRADO";
             document.getElementById('tagStatus').className = "status-tag tag-fechado";
             document.getElementById('txtTitulo').innerText = "Este link não está mais disponível";
@@ -195,29 +299,63 @@
             const mensagem = document.getElementById('msgListaFechada');
             mensagem.style.display = 'block';
             mensagem.innerText = texto;
+            atualizarEstadoAutenticacao();
         }
 
-        function renderForm(cfg) {
+        function preencherDadosFormulario(cfg) {
             document.querySelector('.grid-info').style.display = 'grid';
-            document.getElementById('txtTitulo').innerText = cfg.nomeJogo;
-            document.getElementById('txtData').innerText = `${cfg.data} (${cfg.dia})`;
-            document.getElementById('txtHora').innerText = `${cfg.inicio} às ${cfg.fim}`;
-            document.getElementById('txtLocal').innerText = cfg.quadra;
+            document.getElementById('txtTitulo').innerText = cfg.nomeJogo || "";
+            document.getElementById('txtData').innerText = `${cfg.data || ""}${cfg.dia ? ` (${cfg.dia})` : ""}`;
+            document.getElementById('txtHora').innerText = cfg.inicio && cfg.fim
+                ? `${cfg.inicio} às ${cfg.fim}`
+                : cfg.inicio || cfg.fim || "";
+            document.getElementById('txtLocal').innerText = cfg.quadra || "";
             document.getElementById('txtValor').innerText = cfg.valorTexto || "";
             document.getElementById('txtDescricao').innerText = cfg.textoApoio || "";
-            
-            // LOGICA DO LINK DO MAPA
+
             const lnkMapa = document.getElementById('lnkMapa');
-            if (cfg.mapaLink && cfg.mapaLink.trim() !== "") {
+            if (typeof cfg.mapaLink === "string" && cfg.mapaLink.trim() !== "") {
                 lnkMapa.href = cfg.mapaLink;
                 lnkMapa.style.display = "block";
             } else {
                 lnkMapa.style.display = "none";
             }
 
-            // --- LÓGICA DAS IMAGENS ---
-            const imgBanner = document.getElementById('imgBanner');
-            imgBanner.src = BANNER_PADRAO_URL;
+            document.getElementById('imgBanner').src = BANNER_PADRAO_URL;
+        }
+
+        function renderFormProvisorio(cfg) {
+            preencherDadosFormulario(cfg);
+            const tag = document.getElementById('tagStatus');
+            tag.innerText = "● ATUALIZANDO...";
+            tag.className = "status-tag tag-atualizando";
+            document.getElementById('formBody').style.display = "none";
+            document.getElementById('msgListaFechada').style.display = "none";
+            atualizarEstadoAutenticacao();
+        }
+
+        function renderFalhaAtualizacao() {
+            formularioAtual = null;
+            dadosConfirmados = false;
+            const tag = document.getElementById('tagStatus');
+            tag.innerText = "● SEM CONEXÃO";
+            tag.className = "status-tag tag-fechado";
+            document.getElementById('formBody').style.display = "none";
+
+            if (!cacheExibido) {
+                document.getElementById('txtTitulo').innerText = "Não foi possível carregar o formulário";
+                document.querySelector('.grid-info').style.display = 'none';
+                document.getElementById('txtDescricao').innerText = '';
+            }
+
+            const mensagem = document.getElementById('msgListaFechada');
+            mensagem.style.display = 'block';
+            mensagem.innerText = "Não foi possível confirmar os dados atuais. Verifique sua conexão e recarregue a página.";
+            atualizarEstadoAutenticacao();
+        }
+
+        function renderForm(cfg) {
+            preencherDadosFormulario(cfg);
 
             const tag = document.getElementById('tagStatus');
             const btn = document.getElementById('btnSubmit');
