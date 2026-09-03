@@ -3,7 +3,7 @@ import { encerrarSessao, obterPerfilAcesso, PAPEL_MASTER } from "./access-contro
 
 async function injectNavbar() {
     try {
-        const response = await fetch("navbar.html");
+        const response = await fetch("navbar.html?v=20260903-2");
         if (!response.ok) throw new Error("Navbar não encontrada");
         const navbarHtml = await response.text();
         document.body.insertAdjacentHTML("beforeend", navbarHtml);
@@ -14,6 +14,7 @@ async function injectNavbar() {
             "index.html": "nav-index",
             "times.html": "nav-times",
             "jogadores.html": "nav-jogadores",
+            "story.html": "nav-story",
             "acessos.html": "nav-acessos"
         };
         document.getElementById(idsPorPagina[page])?.classList.add("active");
@@ -37,5 +38,4 @@ async function injectNavbar() {
         console.warn("Não foi possível carregar a navbar:", error);
     }
 }
-
 injectNavbar();

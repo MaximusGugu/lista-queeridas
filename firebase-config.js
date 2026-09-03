@@ -20,7 +20,10 @@ const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch
 
 // O formulário aceita uma conta Google comum; as demais telas exigem uma conta administrativa.
 const paginaAtual = window.location.pathname.split("/").pop();
-const paginaPublica = paginaAtual === "form.html" || paginaAtual === "login.html";
+const previewStoryLocal = paginaAtual === "story.html"
+    && ["localhost", "127.0.0.1"].includes(window.location.hostname)
+    && new URLSearchParams(window.location.search).has("preview");
+const paginaPublica = paginaAtual === "form.html" || paginaAtual === "login.html" || previewStoryLocal;
 if (!paginaPublica) {
     onAuthStateChanged(auth, (user) => {
         if (!user || user.isAnonymous) window.location.href = "login.html";

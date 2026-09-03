@@ -625,7 +625,7 @@ body.modal-open { position: fixed; left: 0; right: 0; width: 100%; overflow: hid
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: stretch;
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
     border-top: 1px solid rgba(0,0,0,0.05);
@@ -634,7 +634,7 @@ body.modal-open { position: fixed; left: 0; right: 0; width: 100%; overflow: hid
     min-height: calc(64px + env(safe-area-inset-bottom));
 }
 
-.bottom-nav.has-master-access { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.bottom-nav.has-master-access { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 
 .nav-link {
     text-decoration: none;
@@ -798,6 +798,120 @@ main.container { padding-bottom: 100px !important; }
 .nota-selector { display: flex; background: #e2e8f0; padding: 4px; border-radius: 12px; margin-bottom: 5px; }
 .nota-option { flex: 1; text-align: center; padding: 8px; font-size: 10px; font-weight: 800; color: #64748b; cursor: pointer; transition: 0.2s; border-radius: 9px; text-transform: uppercase; }
 .nota-option.active { background: white; color: var(--text-dark); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+/* --- CRIADOR DE STORIES --- */
+.story-page { padding-top: 12px; }
+.story-mode-selector { margin-bottom: 12px; }
+.story-mode-option {
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+}
+.story-mode-option.is-unavailable { opacity: 0.42; }
+.story-upload-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 46px;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.story-upload-row .btn { min-height: 46px; }
+.story-icon-button {
+    width: 46px;
+    height: 46px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: white;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+}
+.story-icon-button:disabled { opacity: 0.45; cursor: not-allowed; }
+.story-canvas-shell {
+    position: relative;
+    width: min(100%, 360px);
+    aspect-ratio: 9 / 16;
+    margin: 0 auto 12px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #e2e8f0;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+.story-canvas-shell canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.story-canvas-shell canvas:active { cursor: grabbing; }
+.story-empty-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    text-align: center;
+    pointer-events: none;
+}
+.story-zoom-control {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.story-zoom-control label {
+    color: var(--text-muted);
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.story-zoom-control input { width: 100%; accent-color: var(--color-todes); }
+.theme-allstars .story-zoom-control input { accent-color: var(--color-allstars); }
+.theme-elax .story-zoom-control input { accent-color: var(--color-elax); }
+.theme-praia .story-zoom-control input { accent-color: var(--color-praia); }
+.story-status {
+    min-height: 16px;
+    margin: 0 0 8px;
+    color: var(--danger);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+}
+.story-status:empty { display: none; }
+.story-export-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.story-export-actions .btn { min-height: 44px; }
+.toast-centered {
+    left: 50% !important;
+    top: auto !important;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    animation: storyToast 1.8s ease-out forwards;
+}
+@keyframes storyToast {
+    0% { opacity: 0; transform: translate(-50%, 10px); }
+    15%, 80% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -8px); }
+}
+
+@media (max-width: 600px) {
+    .story-canvas-shell { width: min(100%, 330px); }
+    .story-export-actions { grid-template-columns: 1fr; }
+}
 
 /* --- FORMULARIO PUBLICO --- */
 .public-form-page { background-color: #f1f5f9; padding: 15px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
