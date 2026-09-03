@@ -1,7 +1,7 @@
 const STORY_WIDTH = 1080;
 const STORY_HEIGHT = 1920;
 const EXPORT_SCALE = 2;
-const MIN_ZOOM = 1;
+const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3;
 const TEMPLATE_PATHS = {
     todes: "story-todes.png?v=20260903-2",
@@ -84,11 +84,25 @@ function constrainOffsets() {
     offsetY = Math.max(-maxY, Math.min(maxY, offsetY));
 }
 
+function drawPhotoBackground(targetContext, width, height) {
+    if (!photo) {
+        targetContext.fillStyle = "#e2e8f0";
+        targetContext.fillRect(0, 0, width, height);
+        return;
+    }
+
+    const scale = Math.max(width / photo.naturalWidth, height / photo.naturalHeight);
+    const widthScaled = photo.naturalWidth * scale;
+    const heightScaled = photo.naturalHeight * scale;
+    const x = (width - widthScaled) / 2;
+    const y = (height - heightScaled) / 2;
+    targetContext.drawImage(photo, x, y, widthScaled, heightScaled);
+}
+
 function drawStory(targetContext, outputScale = 1) {
     const outputWidth = STORY_WIDTH * outputScale;
     const outputHeight = STORY_HEIGHT * outputScale;
-    targetContext.fillStyle = "#f1f5f9";
-    targetContext.fillRect(0, 0, outputWidth, outputHeight);
+    drawPhotoBackground(targetContext, outputWidth, outputHeight);
     targetContext.imageSmoothingEnabled = true;
     targetContext.imageSmoothingQuality = "high";
 
