@@ -982,17 +982,16 @@ main.container { padding-bottom: 100px !important; }
 .login-card { max-width: 350px; text-align: center; border-left: none; border: 2px solid var(--color-allstars); }
 .login-title { color: var(--text-dark); margin-bottom: 5px; }
 .login-subtitle { font-size: 12px; opacity: 0.7; }
-.btn-google-login {
-    width: 100%; min-height: 46px; border: 1px solid #d1d5db; border-radius: 10px;
-    background: white; color: #1f2937; font-family: inherit; font-size: 14px; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+.google-signin-host {
+    width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-.btn-google-login:disabled { opacity: 0.55; cursor: wait; }
-.google-mark {
-    width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center;
-    justify-content: center; color: #4285f4; font-size: 18px; font-weight: 900;
-}
+.google-signin-host[aria-busy="true"] { opacity: 0.58; }
+.google-signin-host > div,
+.google-signin-host iframe { max-width: 100% !important; }
 .login-message, .access-message { margin: 12px 0 0; font-size: 11px; font-weight: 700; line-height: 1.4; }
 .login-message.is-erro, .access-message.is-erro { color: #b91c1c; }
 .login-message.is-aviso { color: #92400e; }

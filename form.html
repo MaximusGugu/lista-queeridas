@@ -10,7 +10,7 @@
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/MaximusGugu/lista-queeridas/refs/heads/main/favicon.png" />
     <title>Inscrição - Queeridas Volleyball</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260903-2">
+    <link rel="stylesheet" href="style.css?v=20260917-1">
     <script src="standalone-navigation.js" defer></script>
 </head>
 <body class="public-form-page">
@@ -48,10 +48,7 @@
                 <div id="publicAuthGate" class="public-auth-gate hidden">
                     <h2>Entre para se inscrever</h2>
                     <p>Use sua conta Google. Você continuará conectado neste navegador nas próximas inscrições.</p>
-                    <button id="btnPublicGoogleLogin" class="btn-google-login" type="button">
-                        <span class="google-mark" aria-hidden="true">G</span>
-                        <span>Continuar com Google</span>
-                    </button>
+                    <div id="btnPublicGoogleLogin" class="google-signin-host" aria-label="Continuar com Google"></div>
                     <p id="publicAuthMessage" class="login-message hidden" role="alert"></p>
                 </div>
 
@@ -81,7 +78,8 @@
     </div>
 
     <script type="module">
-        import { auth, authPersistenceReady, collection, db, doc, GoogleAuthProvider, onAuthStateChanged, onSnapshot, runTransaction, serverTimestamp, signInWithPopup, signOut } from "./firebase-config.js";
+        import { auth, authPersistenceReady, collection, db, doc, onAuthStateChanged, onSnapshot, runTransaction, serverTimestamp, signOut } from "./firebase-config.js";
+        import { desativarSelecaoAutomaticaGoogle, renderizarBotaoGoogle } from "./google-signin.js";
 
         const params = new URLSearchParams(window.location.search);
         const identificadorPublico = params.get('lista') || '';
@@ -108,7 +106,6 @@
         const inputEmail = document.getElementById('iptEmail');
         const btnGoogle = document.getElementById('btnPublicGoogleLogin');
         const btnTrocarConta = document.getElementById('btnSwitchPublicAccount');
-        let loginEmAndamento = false;
 
         function chaveCacheFormulario() {
             return identificadorPublico ? `${CACHE_FORM_PREFIXO}${identificadorPublico}` : "";
@@ -180,10 +177,8 @@
         }
 
         function mensagemErroGoogle(error) {
-            if (error?.code === 'auth/popup-closed-by-user') return 'Login cancelado. Tente novamente.';
-            if (error?.code === 'auth/popup-blocked') return 'O navegador bloqueou a janela do Google. Permita pop-ups e tente novamente.';
-            if (error?.code === 'auth/cancelled-popup-request') return 'Já existe uma tentativa de login aberta.';
             if (error?.code === 'auth/network-request-failed') return 'Sem conexão com o Google. Verifique sua internet.';
+            if (error?.code === 'auth/invalid-credential') return 'O Google não conseguiu validar esta sessão. Escolha a conta novamente.';
             return 'Não foi possível entrar com o Google.';
         }
 
@@ -197,31 +192,36 @@
             inputEmail.value = formularioAberto && autenticado ? user.email : '';
         }
 
-        async function entrarComGoogle() {
-            if (loginEmAndamento) return;
-            loginEmAndamento = true;
-            btnGoogle.disabled = true;
+        renderizarBotaoGoogle(btnGoogle, {
+            texto: 'continue_with',
+            aoEntrar: resultado => {
+                if (!usuarioGoogleValido(resultado.user)) throw new Error('CONTA_GOOGLE_INVALIDA');
+                mostrarMensagemAuth('');
+                atualizarEstadoAutenticacao(resultado.user);
+            },
+            aoErro: error => {
+                console.error('Falha no login Google do formulário:', error);
+                mostrarMensagemAuth(mensagemErroGoogle(error));
+            }
+        }).catch(error => {
+            console.error('Falha ao preparar o login Google do formulário:', error);
+            mostrarMensagemAuth('Não foi possível carregar o botão do Google. Atualize a página e tente novamente.');
+        });
+
+        btnTrocarConta.onclick = async () => {
             btnTrocarConta.disabled = true;
             mostrarMensagemAuth('');
             try {
-                await authPersistenceReady;
-                const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
-                const resultado = await signInWithPopup(auth, provider);
-                if (!usuarioGoogleValido(resultado.user)) throw new Error('CONTA_GOOGLE_INVALIDA');
-                atualizarEstadoAutenticacao(resultado.user);
+                desativarSelecaoAutomaticaGoogle();
+                await signOut(auth);
+                atualizarEstadoAutenticacao(null);
             } catch (error) {
-                console.error('Falha no login Google do formulário:', error);
-                mostrarMensagemAuth(mensagemErroGoogle(error));
+                console.error('Falha ao trocar a conta Google:', error);
+                mostrarMensagemAuth('Não foi possível trocar a conta agora. Tente novamente.');
             } finally {
-                loginEmAndamento = false;
-                btnGoogle.disabled = false;
                 btnTrocarConta.disabled = false;
             }
-        }
-
-        btnGoogle.onclick = entrarComGoogle;
-        btnTrocarConta.onclick = entrarComGoogle;
+        };
         onAuthStateChanged(auth, user => atualizarEstadoAutenticacao(user));
 
         function iniciarFormularioPublico() {

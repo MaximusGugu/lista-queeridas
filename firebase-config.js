@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { browserLocalPersistence, getAuth, GoogleAuthProvider, onAuthStateChanged, setPersistence, signInAnonymously, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { browserLocalPersistence, getAuth, onAuthStateChanged, setPersistence, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, setDoc, updateDoc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -41,7 +41,6 @@ export {
   doc,
   getDoc,
   getDocs,
-  GoogleAuthProvider,
   onAuthStateChanged,
   onSnapshot,
   query,
@@ -50,7 +49,6 @@ export {
   setPersistence,
   setDoc,
   signInAnonymously,
-  signInWithPopup,
   signOut,
   updateDoc,
   where
